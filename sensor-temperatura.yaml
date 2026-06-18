@@ -1,0 +1,51 @@
+esphome:
+  name: "sensor-temperatura"
+  friendly_name: sensor_temperatura
+
+esp8266:
+  board: esp01_1m
+
+# Enable logging
+logger:
+  baud_rate: 0
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "e+tX1immPG+RmZjI4eet4IRd9g+VpOWY0d0i+TqoNxc="
+
+ota:
+  - platform: esphome
+    password: "3c300a15182cc50c42436ab1bcef0e20"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Sensor-Temperatura-1"
+    password: "vDunrhm8tKI7"
+
+mqtt:
+  broker: !secret mqtt_host
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+
+captive_portal:
+
+i2c:
+  sda: GPIO4
+  scl: GPIO5
+  scan: true
+
+sensor:
+  - platform: bme280_i2c
+    temperature:
+      name: "Temperatura"
+      oversampling: 16x
+    pressure:
+      name: "Presion atmosferica"
+    humidity:
+      name: "Humedad relativa"
+    address: 0x76
+    update_interval: 60s

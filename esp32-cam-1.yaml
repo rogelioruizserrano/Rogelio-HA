@@ -1,0 +1,253 @@
+substitutions:
+  name: smart-train
+  friendly_name: Smart Train
+
+esphome:
+  name: esp32-cam-1
+  friendly_name: Tren
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "J073f8X+dqUx/PgtfH3DPq5TQKGjoqTAu3MIvpTZpAE="
+
+ota:
+  - platform: esphome
+    password: "ab8417782fd5bed20ff6d74cb383d3c4"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Esp32-Cam-1 Fallback Hotspot"
+    password: "68lSG2hbtH1P"
+
+captive_portal:
+
+# Opcional: web simple para ver logs/estado
+web_server:
+  port: 80
+
+# =========================
+# CÁMARA (ESP32-CAM AI Thinker)
+# =========================
+psram:
+  mode: quad
+  speed: 80MHz
+
+esp32_camera:
+  name: "${friendly_name} Camera"
+  external_clock:
+    pin: GPIO0
+    frequency: 20MHz
+  i2c_pins:
+    sda: GPIO26
+    scl: GPIO27
+  data_pins: [GPIO5, GPIO18, GPIO19, GPIO21, GPIO36, GPIO39, GPIO34, GPIO35]
+  vsync_pin: GPIO25
+  href_pin: GPIO23
+  pixel_clock_pin: GPIO22
+  power_down_pin: GPIO32
+
+  # Ajusta a gusto (por defecto suele ir bien)
+
+  frame_buffer_location: psram
+  resolution: QVGA
+  jpeg_quality: 12
+  max_framerate: 15 fps
+
+esp32_camera_web_server:
+  - port: 8080
+    mode: stream
+  - port: 8081
+    mode: snapshot
+
+# =========================
+# SALIDAS (pins del sketch)
+# =========================
+
+# Motor
+output:
+  - platform: ledc
+    id: motor_speed_pwm
+    pin: GPIO15
+    frequency: 1000 Hz
+
+  # Dirección la tratamos como salida digital (como 0/255 en tu sketch)
+  - platform: gpio
+    id: motor_dir_out
+    pin: GPIO14
+
+  # Linterna en GPIO2 (PWM)
+  - platform: ledc
+    id: lantern_pwm
+    pin: GPIO2
+    frequency: 1000 Hz
+
+# Vapor: dos GPIO
+switch:
+  - platform: gpio
+    id: steam_1
+    name: "${friendly_name} Steam 1"
+    pin: GPIO13
+    internal: true
+
+  - platform: gpio
+    id: steam_2
+    name: "${friendly_name} Steam 2"
+    pin: GPIO12
+    internal: true
+
+  - platform: template
+    name: "${friendly_name} Steam"
+    id: steam_switch
+    optimistic: true
+    turn_on_action:
+      - switch.turn_on: steam_1
+      - switch.turn_off: steam_2
+    turn_off_action:
+      - switch.turn_off: steam_1
+      - switch.turn_off: steam_2
+
+# Luz/linterna como Light (dimmer)
+light:
+  - platform: monochromatic
+    name: "${friendly_name} Lantern"
+    output: lantern_pwm
+    id: lantern_light
+    restore_mode: RESTORE_DEFAULT_OFF
+
+# =========================
+# CONTROL DEL TREN (igual lógica que el .ino)
+# =========================
+
+globals:
+  - id: train_speed
+    type: int
+    restore_value: true
+    initial_value: "0"      # 0..250 en tu sketch
+  - id: train_forward
+    type: bool
+    restore_value: true
+    initial_value: "true"   # true=forward, false=backward
+
+script:
+  - id: apply_motor
+    mode: restart
+    then:
+      - lambda: |-
+          // Replica del comportamiento del .ino
+          const int sp = id(train_speed);          // 0..250
+          const bool fwd = id(train_forward);
+
+          // Dirección (en tu .ino: forward => DIR=0, backward => DIR=255)
+          if (fwd) {
+            id(motor_dir_out).turn_off(); // 0
+          } else {
+            id(motor_dir_out).turn_on();  // 1
+          }
+
+          // PWM normalizado 0.0..1.0 en ESPHome
+          auto set_pwm_0_255 = [&](int v255){
+            if (v255 < 0) v255 = 0;
+            if (v255 > 255) v255 = 255;
+            id(motor_speed_pwm).set_level(v255 / 255.0f);
+          };
+
+          if (fwd) {
+            // forward: PWM = trainSpeed (0=stop)
+            set_pwm_0_255(sp);
+          } else {
+            // backward: caso especial y mapeo invertido como en tu sketch
+            if (sp == 0) {
+              set_pwm_0_255(255);
+            } else {
+              // map(sp, 0, 250, 250, 0)
+              int mapped = (250 - sp);
+              // en tu .ino escribes 0..250, aquí lo escalamos a 0..255 aprox
+              int v255 = (mapped * 255) / 250;
+              set_pwm_0_255(v255);
+            }
+          }
+
+number:
+  - platform: template
+    name: "${friendly_name} Speed"
+    id: speed_number
+    min_value: 0
+    max_value: 250
+    step: 10
+    optimistic: true
+    restore_value: true
+    initial_value: 0
+    set_action:
+      - lambda: |-
+          id(train_speed) = (int)x;
+      - script.execute: apply_motor
+
+button:
+  - platform: template
+    name: "${friendly_name} Forward"
+    on_press:
+      - lambda: |-
+          id(train_forward) = true;
+      - script.execute: apply_motor
+
+  - platform: template
+    name: "${friendly_name} Backward"
+    on_press:
+      - lambda: |-
+          id(train_forward) = false;
+      - script.execute: apply_motor
+
+  - platform: template
+    name: "${friendly_name} Stop"
+    on_press:
+      - lambda: |-
+          id(train_speed) = 0;
+      - number.set:
+          id: speed_number
+          value: 0
+      - script.execute: apply_motor
+
+  - platform: template
+    name: "${friendly_name} Faster"
+    on_press:
+      - lambda: |-
+          int sp = id(train_speed);
+          if (sp == 0) sp += 50;
+          else if (sp >= 250) sp = 250;
+          else sp += 10;
+          if (sp > 250) sp = 250;
+          id(train_speed) = sp;
+      - number.set:
+          id: speed_number
+          value: !lambda "return id(train_speed);"
+      - script.execute: apply_motor
+
+  - platform: template
+    name: "${friendly_name} Slower"
+    on_press:
+      - lambda: |-
+          int sp = id(train_speed);
+          if (sp == 0) {
+            // nada
+          } else if (sp == 250) sp -= 50;
+          else sp -= 10;
+          if (sp < 0) sp = 0;
+          id(train_speed) = sp;
+      - number.set:
+          id: speed_number
+          value: !lambda "return id(train_speed);"
+      - script.execute: apply_motor
+    

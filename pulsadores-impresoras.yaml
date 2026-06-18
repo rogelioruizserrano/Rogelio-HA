@@ -1,0 +1,319 @@
+globals:
+  - id: parpadeo_activo
+    type: bool
+    restore_value: no
+    initial_value: 'true'
+
+esphome:
+  name: pulsadores-impresoras
+  friendly_name: pulsadores-impresoras
+  on_boot:
+    priority: -100
+    then:
+      - lambda: |-
+          id(parpadeo_activo) = true;
+      - script.execute: barrido_inicial
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+
+api:
+  encryption:
+    key: "CW0clHKXbZwW7/58etemZfWHM72/M/WdQqKVRb33qhU="
+  on_client_connected:
+    then:
+      - logger.log: "Conectado a Home Assistant, deteniendo parpadeo"
+      - lambda: |-
+          id(parpadeo_activo) = false;
+      - script.execute: establecer_leds_rojo
+
+ota:
+  - platform: esphome
+    password: "0505cb35ad8549003d207c7ab8c3eeb1"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  ap:
+    ssid: "Pulsadores-Impresoras"
+    password: "3YDUNujgkjor"
+
+captive_portal:
+
+output:
+  # LED RGB 1
+  - platform: ledc
+    pin: 4
+    id: led1_rojo
+    inverted: true
+  - platform: ledc
+    pin: 2
+    id: led1_verde
+    inverted: true
+
+  # LED RGB 2
+  - platform: ledc
+    pin: 5
+    id: led2_rojo
+    inverted: true
+  - platform: ledc
+    pin: 17
+    id: led2_verde
+    inverted: true
+
+  # LED RGB 3
+  - platform: ledc
+    pin: 21
+    id: led3_rojo
+    inverted: true
+  - platform: ledc
+    pin: 19
+    id: led3_verde
+    inverted: true
+
+  # LED RGB 4
+  - platform: ledc
+    pin: 27
+    id: led4_rojo
+    inverted: true
+  - platform: ledc
+    pin: 14
+    id: led4_verde
+    inverted: true
+
+  # LED RGB 5
+  - platform: ledc
+    pin: 33
+    id: led5_rojo
+    inverted: true
+  - platform: ledc
+    pin: 25
+    id: led5_verde
+    inverted: true
+
+  # LED RGB 6
+  - platform: ledc
+    pin: 23
+    id: led6_rojo
+    inverted: true
+  - platform: ledc
+    pin: 22
+    id: led6_verde
+    inverted: true
+
+# === DEFINICIÓN DE LOS LEDS RGB COMO "CCT" (rojo y verde) ===
+light:
+  - platform: rgb
+    name: "LED RGB 1"
+    red: led1_rojo
+    green: led1_verde
+    blue: led1_rojo  # Dummy para compatibilidad
+    id: rgb_led_1
+
+  - platform: rgb
+    name: "LED RGB 2"
+    red: led2_rojo
+    green: led2_verde
+    blue: led2_rojo
+    id: rgb_led_2
+
+  - platform: rgb
+    name: "LED RGB 3"
+    red: led3_rojo
+    green: led3_verde
+    blue: led3_rojo
+    id: rgb_led_3
+
+  - platform: rgb
+    name: "LED RGB 4"
+    red: led4_rojo
+    green: led4_verde
+    blue: led4_rojo
+    id: rgb_led_4
+
+  - platform: rgb
+    name: "LED RGB 5"
+    red: led5_rojo
+    green: led5_verde
+    blue: led5_rojo
+    id: rgb_led_5
+
+  - platform: rgb
+    name: "LED RGB 6"
+    red: led6_rojo
+    green: led6_verde
+    blue: led6_rojo
+    id: rgb_led_6
+
+# === INTERRUPTORES TEMPLATE PARA CADA LED ===
+
+switch:
+  - platform: template
+    name: "Estado LED 1"
+    id: switch_led_1
+    optimistic: true
+
+  - platform: template
+    name: "Estado LED 2"
+    id: switch_led_2
+    optimistic: true
+
+
+  - platform: template
+    name: "Estado LED 3"
+    id: switch_led_3
+    optimistic: true
+
+
+  - platform: template
+    name: "Estado LED 4"
+    id: switch_led_4
+    optimistic: true
+
+
+  - platform: template
+    name: "Estado LED 5"
+    id: switch_led_5
+    optimistic: true
+
+  - platform: template
+    name: "Estado LED 6"
+    id: switch_led_6
+    optimistic: true
+
+# === PULSADORES PARA CONTROL DE CADA SWITCH ===
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: 15
+      mode: INPUT_PULLDOWN
+      inverted: false
+    name: "Pulsador LED 1"
+    on_press:
+      then:
+        - switch.toggle: switch_led_1
+
+  - platform: gpio
+    pin:
+      number: 16
+      mode: INPUT_PULLDOWN
+      inverted: false
+    name: "Pulsador LED 2"
+    on_press:
+      then:
+        - switch.toggle: switch_led_2
+
+  - platform: gpio
+    pin:
+      number: 18
+      mode: INPUT_PULLDOWN
+      inverted: false
+    name: "Pulsador LED 3"
+    on_press:
+      then:
+        - switch.toggle: switch_led_3
+
+  - platform: gpio
+    pin:
+      number: 13
+      mode: INPUT_PULLDOWN
+      inverted: false
+    name: "Pulsador LED 4"
+    on_press:
+      then:
+        - switch.toggle: switch_led_4
+
+  - platform: gpio
+    pin:
+      number: 26
+      mode: INPUT_PULLDOWN
+      inverted: false
+    name: "Pulsador LED 5"
+    on_press:
+      then:
+        - switch.toggle: switch_led_5
+
+  - platform: gpio
+    pin:
+      number: 32
+      mode: INPUT_PULLDOWN
+      inverted: false
+    name: "Pulsador LED 6"
+    on_press:
+      then:
+        - switch.toggle: switch_led_6
+
+script:
+  - id: barrido_inicial
+    then:
+      - light.turn_on: rgb_led_1
+      - delay: 300ms
+      - light.turn_off: rgb_led_1
+      - light.turn_on: rgb_led_2
+      - delay: 300ms
+      - light.turn_off: rgb_led_2
+      - light.turn_on: rgb_led_3
+      - delay: 300ms
+      - light.turn_off: rgb_led_3
+      - light.turn_on: rgb_led_4
+      - delay: 300ms
+      - light.turn_off: rgb_led_4
+      - light.turn_on: rgb_led_5
+      - delay: 300ms
+      - light.turn_off: rgb_led_5
+      - light.turn_on: rgb_led_6
+      - delay: 300ms
+      - light.turn_off: rgb_led_6
+
+  - id: establecer_leds_rojo
+    then:
+      - light.turn_on:
+          id: rgb_led_1
+          red: 100%
+          green: 0%
+          blue: 0%
+      - light.turn_on:
+          id: rgb_led_2
+          red: 100%
+          green: 0%
+          blue: 0%
+      - light.turn_on:
+          id: rgb_led_3
+          red: 100%
+          green: 0%
+          blue: 0%
+      - light.turn_on:
+          id: rgb_led_4
+          red: 100%
+          green: 0%
+          blue: 0%
+      - light.turn_on:
+          id: rgb_led_5
+          red: 100%
+          green: 0%
+          blue: 0%
+      - light.turn_on:
+          id: rgb_led_6
+          red: 100%
+          green: 0%
+          blue: 0%
+
+# === Parpadeo de LEDs mientras no haya conexión ===
+interval:
+  - interval: 1s
+    then:
+      - if:
+          condition:
+            lambda: 'return id(parpadeo_activo);'
+          then:
+            - light.toggle: rgb_led_1
+            - light.toggle: rgb_led_2
+            - light.toggle: rgb_led_3
+            - light.toggle: rgb_led_4
+            - light.toggle: rgb_led_5
+            - light.toggle: rgb_led_6

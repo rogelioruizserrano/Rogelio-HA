@@ -1,0 +1,109 @@
+esphome:
+  name: multisensor-salita
+  friendly_name: multisensor-salita
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "IHmZ5DLyOsj+azks9Tn+akq+upO5RsiHqZH7dERaDUc="
+
+ota:
+  - platform: esphome
+    password: "4f446b0ab17adc7db786e4e8f61663a7"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Multisensor-Salita"
+    password: "yxpDx9VGrj2Q"
+
+captive_portal:
+    
+binary_sensor:
+  - platform: status
+    name: "Sensor Status"
+
+# ======================================================
+# UART configuration (ESP32-C3 tiene solo un UART estable)
+# ======================================================
+uart:
+  - id: uart_1
+    rx_pin: GPIO7   # RX del C3 Super Mini
+    tx_pin: GPIO6
+    baud_rate: 9600
+  - id: uart_2
+    tx_pin: GPIO8   # TX del C3 Super Mini
+    rx_pin: GPIO9   # RX del C3 Super Mini
+    baud_rate: 9600
+
+# ======================================================
+# Sensores en el mismo UART, diferenciados por protocolo
+# ======================================================
+sensor:
+  - platform: pm1006
+    pm_2_5:
+      name: "PM2.5 µm concentración"
+    uart_id: uart_1
+
+  - platform: mhz19
+    co2:
+      name: "CO₂ medidor salita"
+    temperature:
+      name: "Temperatura MH-Z19"
+    update_interval: 60s
+    automatic_baseline_calibration: true
+    uart_id: uart_2
+    id: medidor_co2
+
+# ======================================================
+# Controles de calibración MH-Z19
+# ======================================================
+button:
+  - platform: template
+    name: "Calibrate Zero (20 min a 400ppm)"
+    id: calibrate_zero
+    entity_category: diagnostic
+    on_press:
+      - mhz19.calibrate_zero: medidor_co2
+
+switch:
+  - platform: template
+    name: "Automatic Baseline Calibration"
+    entity_category: diagnostic
+    optimistic: true
+    on_turn_on:
+      - mhz19.abc_enable: medidor_co2
+    on_turn_off:
+      - mhz19.abc_disable: medidor_co2
+
+# ======================================================
+# PWM Fan Control (usar transistor para 5V o 12V)
+# ======================================================
+output:
+  - platform: ledc
+    pin: GPIO4     # PWM output
+    frequency: 4882Hz
+    id: pwm_output
+
+fan:
+  - platform: speed
+    output: pwm_output
+    name: "Ventilador sensor partículas"
+    id: fan_1
+
+# ======================================================
+# Bluetooth Proxy (C3 lo soporta perfectamente)
+# ======================================================
+bluetooth_proxy:
+  active: true
