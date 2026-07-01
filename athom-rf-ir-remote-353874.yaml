@@ -1,0 +1,17 @@
+substitutions:
+  name: athom-rf-ir-remote-353874
+  friendly_name: Athom RF IR Remote 353874
+packages:
+  China Athom Technology.Athom RF IR Remote: github://athom-tech/esp32-configs/athom-rf-ir-remote.yaml
+esphome:
+  name: ${name}
+  name_add_mac_suffix: false
+  friendly_name: ${friendly_name}
+api:
+  encryption:
+    key: 9mZ+nGZsShQHO9M/Z/yqJsilFmDGBN4gWO20Uf65Cfk=
+
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
