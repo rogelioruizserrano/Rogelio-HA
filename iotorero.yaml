@@ -1,0 +1,29 @@
+# Board: Generic ESP32 Board (Generic)
+# Definition: definitions/boards/generic-esp32/manifest.yaml
+
+esphome:
+  name: iotorero
+  friendly_name: IoTorero
+
+esp32:
+  variant: esp32
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+  encryption:
+    key: "VVrAWl6AHjaq0NXBoNXom3ktLm6rNDswzS2lerMfric="
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: IoTorero Fallback Hotspot
+    password: "9ltlzYqwfSfg"
+
+captive_portal:
