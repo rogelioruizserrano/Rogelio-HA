@@ -27,3 +27,39 @@ wifi:
     password: "9ltlzYqwfSfg"
 
 captive_portal:
+esp32_ble_tracker:
+bluetooth_proxy:
+  active: true
+
+# Control del LED de estado integrado (GPIO27)
+status_led:
+  pin:
+    number: GPIO27
+
+# Configuración del botón físico del dispositivo (GPIO0)
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO0
+      inverted: true
+      mode: INPUT_PULLUP
+    name: "Botón Físico"
+
+# RECEPTOR de Infrarrojos (IR RX) y Radiofrecuencia (RF RX)
+remote_receiver:
+  - pin: GPIO33
+    dump: all
+    id: receptor_ir
+  - pin: GPIO19
+    dump: rc_switch
+    id: receptor_rf
+    # Nota: dump: all o rc_switch te mostrará los códigos en los logs de ESPHome al pulsar tus mandos
+
+# TRANSMISOR de Infrarrojos (IR TX) y Radiofrecuencia (RF TX)
+remote_transmitter:
+  - pin: GPIO25
+    carrier_duty_percent: 50%
+    id: emisor_ir
+  - pin: GPIO18
+    carrier_duty_percent: 100%
+    id: emisor_rf
