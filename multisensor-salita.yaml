@@ -14,6 +14,8 @@ logger:
 api:
   encryption:
     key: "IHmZ5DLyOsj+azks9Tn+akq+upO5RsiHqZH7dERaDUc="
+  custom_services: true
+  homeassistant_services: true
 
 ota:
   - platform: esphome
@@ -22,14 +24,13 @@ ota:
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
-
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
     ssid: "Multisensor-Salita"
     password: "yxpDx9VGrj2Q"
 
 captive_portal:
-    
+
 binary_sensor:
   - platform: status
     name: "Sensor Status"
@@ -55,7 +56,6 @@ sensor:
     pm_2_5:
       name: "PM2.5 µm concentración"
     uart_id: uart_1
-
   - platform: mhz19
     co2:
       name: "CO₂ medidor salita"
@@ -103,7 +103,25 @@ fan:
     id: fan_1
 
 # ======================================================
-# Bluetooth Proxy (C3 lo soporta perfectamente)
+# Bluetooth Proxy estándar (tracking normal de BLE)
 # ======================================================
 bluetooth_proxy:
   active: true
+
+# ======================================================
+# BLE ADV Proxy (RAW advertising bidireccional para
+# controlar el ventilador Mantra vía ha-ble-adv)
+# ======================================================
+external_components:
+  - source: github://NicoIIT/esphome-ble_adv_proxy
+
+ble_adv_proxy:
+  use_max_tx_power: true   # súbelo si el ESP32 queda lejos del ventilador
+  # adapter_name: esp-proxy-salita  # solo si quieres un nombre distinto al del nodo
+
+# Descomenta esto si empiezan a salir warnings de
+# "Too many BLE events to process" en el log:
+# esp32_ble_tracker:
+#   scan_parameters:
+#     window: 20ms
+#     interval: 20ms
