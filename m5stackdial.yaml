@@ -1,0 +1,29 @@
+# Board: M5Stack Dial
+# Definition: definitions/boards/m5stack_dial/manifest.yaml
+
+esphome:
+  name: m5stackdial
+  friendly_name: M5stackDial
+
+esp32:
+  variant: esp32s3
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+  encryption:
+    key: "LYOyak5NwU4Bvn/CgYd2zYqjmpGUhppS3BgmIDmyr30="
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: M5stackDial Fallback Hotspot
+    password: "OV9iCFZdCE5Y"
+
+captive_portal:
