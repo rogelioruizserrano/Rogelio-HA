@@ -39,3 +39,8 @@ light:
     id: display_backlight
     default_transition_length: 0s
     output: backlight_output
+
+spi:
+  - id: spi_bus
+    clk_pin: 6
+    mosi_pin: 5
