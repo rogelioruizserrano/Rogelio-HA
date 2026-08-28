@@ -49,3 +49,9 @@ i2c:
   - id: internal_i2c
     scl: 12
     sda: 11
+
+binary_sensor:
+  - platform: gpio
+    name: Button
+    id: front_button
+    pin: 42
