@@ -55,3 +55,7 @@ binary_sensor:
     name: Button
     id: front_button
     pin: 42
+  - platform: gpio
+    name: Hold Button
+    id: binary_sensor_gpio_2
+    pin: 46
