@@ -3,20 +3,42 @@ substitutions:
   wifi_ssid: !secret wifi_ssid
   wifi_password: !secret wifi_password
 
-# Trae todo el componente M5 Dial: esphome:, esp32 (board/framework arduino),
-# external_components, dashboard_import, logger, api base, ota, wifi, captive_portal.
-packages:
-  m5_dial_package:
-    url: https://github.com/SmartHome-yourself/m5-dial-for-esphome
-    ref: main
-    file: shys-m5-dial.yaml
-    refresh: 1h
+esphome:
+  name: ${name}
+  name_add_mac_suffix: false
+  project:
+    name: smarthomeyourself.m5_dial
+    version: "1.2"
+  platformio_options:
+    lib_deps:
+      - Wire
+      - EEPROM
+      - ArduinoJson
+      - m5stack/M5Unified@0.2.14
+      - m5stack/M5Dial@1.0.3
+      # OJO: quitamos aquí "m5stack/M5GFX@0.2.20" a propósito.
+      # Esa versión exacta ya no se puede descargar del registro de
+      # PlatformIO ("UnknownPackageError: Could not find the package
+      # with 'm5stack/M5GFX @ 0.2.20'"), y como viene fijada así dentro
+      # de shys-m5-dial.yaml, usar `packages:` para importarlo la vuelve
+      # a meter sin que podamos quitarla (las listas de un package se
+      # concatenan, nunca se sobrescriben). M5Unified ya pide M5GFX
+      # como dependencia (>=0.2.20), así que PlatformIO instalará solo
+      # la versión más reciente compatible (ahora mismo la 0.2.28) sin
+      # que la pidamos explícitamente.
 
-# Forzamos el toolchain clásico de PlatformIO: es lo que evita que ESPHome
-# intente convertir M5Unified/M5Dial/M5GFX en componentes de ESP-IDF
-# (ahí es donde chocaba con "No version of m5stack/M5GFX satisfies...").
-# Repetimos el resto del bloque tal cual lo trae el package para no dejar
-# nada a la resolución automática del merge.
+# Traemos solo el componente en sí (el código C++), no el yaml completo
+# del proyecto, para no arrastrar ese lib_deps roto.
+external_components:
+  - source:
+      type: git
+      url: https://github.com/SmartHome-yourself/m5-dial-for-esphome/
+      ref: main
+    components: [shys_m5_dial]
+
+# Toolchain clásico de PlatformIO: evita que ESPHome intente convertir
+# M5Unified/M5Dial/M5GFX en componentes de ESP-IDF (donde chocaba con
+# "No version of m5stack/M5GFX satisfies...").
 esp32:
   board: esp32-s3-devkitc-1
   toolchain: platformio
@@ -27,7 +49,33 @@ esp32:
         - esp_lcd
   flash_size: 8MB
 
+logger:
+  level: INFO
+  logs:
+    api: WARN
+    esp32.preferences: WARN
+    LOOP: WARN
+    DISPLAY: WARN
+    TOUCH: WARN
+    HA_API: WARN
+    DEVICE: WARN
+    MEDIAPLAYER: WARN
+
+ota:
+  platform: esphome
+
+wifi:
+  ssid: ${wifi_ssid}
+  password: ${wifi_password}
+  ap:
+    password: "12345678"
+
+captive_portal:
+
 api:
+  homeassistant_states: true
+  homeassistant_services: true
+  custom_services: true
   encryption:
     key: "LYOyak5NwU4Bvn/CgYd2zYqjmpGUhppS3BgmIDmyr30="
 
