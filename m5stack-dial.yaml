@@ -32,3 +32,10 @@ output:
   - platform: ledc
     id: backlight_output
     pin: 9
+
+light:
+  - platform: monochromatic
+    name: Backlight
+    id: display_backlight
+    default_transition_length: 0s
+    output: backlight_output
