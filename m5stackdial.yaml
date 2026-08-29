@@ -89,11 +89,11 @@ shys_m5_dial:
   time_component: homeassistant_time
   screen_off_time: 45000
   screensaver: clock
-  rotary_step_width: 5
+  rotary_step_width: 1
   long_press_duration: 1200
   font: default
   font_factor: 1
-  display_rotate: 2
+  display_rotate: 1
 
   devices:
     lights:
@@ -159,7 +159,7 @@ shys_m5_dial:
         name: TV LG Salita
         modes:
           play_mode:
-            rotary_step_width: 10
+            rotary_step_width: 1
           source_mode:
             rotary_step_width: 1
             sources:
