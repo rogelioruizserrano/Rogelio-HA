@@ -32,6 +32,9 @@ output:
   - platform: ledc
     id: backlight_output
     pin: 9
+  - platform: ledc
+    id: buzzer
+    pin: 3
 
 light:
   - platform: monochromatic
