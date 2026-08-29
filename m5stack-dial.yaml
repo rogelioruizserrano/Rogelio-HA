@@ -22,11 +22,11 @@ substitutions:
   screen_dim_brightness: "20%"
 
 # Deja la lista vacía (o coméntala) si todavía no quieres activar Lights.
-dial_lights: []
-  # - entity_id: light.mi_luz1
-  #   name: Luz 1
-  # - entity_id: light.mi_luz2
-  #   name: Luz 2
+dial_lights:
+   - entity_id: light.ventilador_salita
+     name: Luz ventilador
+   - entity_id: light.yeelight_lamparita_salita
+     name: Lamparita
 
 packages:
   smart_home_button:
