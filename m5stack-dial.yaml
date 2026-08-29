@@ -27,3 +27,8 @@ wifi:
     password: "I0lto0JXhQIC"
 
 captive_portal:
+
+output:
+  - platform: ledc
+    id: backlight_output
+    pin: 9
