@@ -163,12 +163,24 @@ shys_m5_dial:
           source_mode:
             rotary_step_width: 1
             sources:
-              - name: 1Live
-                content_id: 1Live
-                content_type: TUNEIN
-              - name: WDR2
-                content_id: "http://wdr-wdr2-bergischesland.icecast.wdr.de/wdr/wdr2/bergischesland/mp3/128/stream.mp3"
-                content_type: custom
+              - name: Live TV
+                content_id: LiveTV
+                content_type: LiveTV
+              - name: Netflix
+                content_id: Netflix
+                content_type: Netflix
+              - name: Prime Video
+                content_id: Prime Video
+                content_type: Prime Video
+              - name: Plex
+                content_id: Plex
+                content_type: Plex
+              - name: YouTube
+                content_id: YouTube
+                content_type: YouTube
+              - name: Jellyfin
+                content_id: Jellyfin
+                content_type: Jellyfin
 
     lock:
 
