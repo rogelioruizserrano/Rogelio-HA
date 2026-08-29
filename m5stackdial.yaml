@@ -63,6 +63,7 @@ logger:
 
 ota:
   platform: esphome
+  password: !secret m5stackdial__ota_password
 
 wifi:
   ssid: ${wifi_ssid}
