@@ -1,71 +1,37 @@
-# Board: M5Stack Dial
-# Definition: definitions/boards/m5stack_dial/manifest.yaml
+substitutions:
+  timezone: Europe/Madrid
 
-esphome:
-  name: m5stack-dial
-  friendly_name: M5Stack Dial
+  api_encryption_key: !secret dial_api_key
+  wifi_ssid: !secret wifi_ssid
+  wifi_password: !secret wifi_password
 
-esp32:
-  variant: esp32s3
-  framework:
-    type: esp-idf
+  # Opcionales: si los dejas tal cual (con estos valores de ejemplo),
+  # esa página del menú queda automáticamente oculta.
+  weather_entity: weather.tu_estacion
+  aqi_entity: sensor.tu_aqi
+  climate_entity: climate.your_ac
+  timer_entity: timer.your_timer
 
-logger:
+  # Reutilizamos tu TV como "Music" (play/pausa, volumen y metadatos;
+  # no hay selector de fuentes/apps en este firmware).
+  music_player_entity: media_player.tv_salita_lg
 
-api:
-  encryption:
-    key: "qg7UZvOu1oTXPao9nrs8ccX3EsCnt63qo6Qsvzu270A="
+  screen_return_timeout: 30s
+  screen_dim_timeout: 15s
+  screen_off_timeout: 60s
+  screen_dim_brightness: "20%"
 
-ota:
-  - platform: esphome
+# Deja la lista vacía (o coméntala) si todavía no quieres activar Lights.
+dial_lights: []
+  # - entity_id: light.mi_luz1
+  #   name: Luz 1
+  # - entity_id: light.mi_luz2
+  #   name: Luz 2
 
-wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
-  ap:
-    ssid: M5Stack Dial Fallback Hotspot
-    password: "I0lto0JXhQIC"
-
-captive_portal:
-
-output:
-  - platform: ledc
-    id: backlight_output
-    pin: 9
-  - platform: ledc
-    id: buzzer
-    pin: 3
-
-light:
-  - platform: monochromatic
-    name: Backlight
-    id: display_backlight
-    default_transition_length: 0s
-    output: backlight_output
-
-spi:
-  - id: spi_bus
-    clk_pin: 6
-    mosi_pin: 5
-
-i2c:
-  - id: internal_i2c
-    scl: 12
-    sda: 11
-
-binary_sensor:
-  - platform: gpio
-    name: Button
-    id: front_button
-    pin: 42
-  - platform: gpio
-    name: Hold Button
-    id: binary_sensor_gpio_2
-    pin: 46
-
-sensor:
-  - platform: rotary_encoder
-    name: encoder
-    id: encoder
-    pin_a: 40
-    pin_b: 41
+packages:
+  smart_home_button:
+    url: https://github.com/hectorzin/m5stack-dial-home-assistant
+    ref: main
+    files:
+      - dial.yaml
+    refresh: 0s
