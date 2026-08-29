@@ -62,3 +62,10 @@ binary_sensor:
     name: Hold Button
     id: binary_sensor_gpio_2
     pin: 46
+
+sensor:
+  - platform: rotary_encoder
+    name: encoder
+    id: encoder
+    pin_a: 40
+    pin_b: 41
