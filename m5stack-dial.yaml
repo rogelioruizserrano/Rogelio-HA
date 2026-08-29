@@ -7,9 +7,9 @@ substitutions:
 
   # Opcionales: si los dejas tal cual (con estos valores de ejemplo),
   # esa página del menú queda automáticamente oculta.
-  weather_entity: weather.tu_estacion
+  weather_entity: weather.pirateweather
   aqi_entity: sensor.tu_aqi
-  climate_entity: climate.your_ac
+  climate_entity: climate.casa
   timer_entity: timer.your_timer
 
   # Reutilizamos tu TV como "Music" (play/pausa, volumen y metadatos;
