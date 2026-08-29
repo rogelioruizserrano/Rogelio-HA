@@ -8,7 +8,7 @@ substitutions:
   # Opcionales: si los dejas tal cual (con estos valores de ejemplo),
   # esa página del menú queda automáticamente oculta.
   weather_entity: weather.pirateweather
-  aqi_entity: sensor.tu_aqi
+  aqi_entity: sensor.multisensor_salita_co2_medidor_salita
   climate_entity: climate.casa
   timer_entity: timer.your_timer
 
