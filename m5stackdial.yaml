@@ -97,8 +97,8 @@ shys_m5_dial:
 
   devices:
     lights:
-      - entity: light.my_light1
-        name: Light 1
+      - entity: light.ventilador_salita
+        name: Lampara de la salita
         modes:
           dimm_mode:
             enable: true
@@ -112,28 +112,31 @@ shys_m5_dial:
             min_kelvin: 2500
             max_kelvin: 7000
 
-      - entity: light.my_light2
-        name: Light 2
+      - entity: light.yeelight_lamparita_salita
+        name: Lamparita
+        modes:
+          dimm_mode:
+            enable: true
+            rotary_step_width: 10
+          rgb_mode:
+            enable: true
+            rotary_step_width: 30
+          white_mode:
+            enable: true
+            rotary_step_width: 100
+            min_kelvin: 2500
+            max_kelvin: 7000
 
     switches:
-      - entity: switch.my_switch
-        name: Switch 1
 
     climates:
-      - entity: climate.my_climate1
-        name: Heater
-        modes:
-          temp_mode:
-            rotary_step_width: 1
-            min_temperature: 4
-            max_temperature: 30
-      - entity: climate.my_climate2
-        name: Air Conditioning
+      - entity: climate.casa
+        name: Aire Acondicionado
         modes:
           temp_mode:
             rotary_step_width: 1
             min_temperature: 16
-            max_temperature: 24
+            max_temperature: 30
           fan_mode:
             rotary_step_width: 1
             modes:
@@ -142,23 +145,18 @@ shys_m5_dial:
               - high
 
     covers:
-      - entity: cover.my_cover1
-        name: Cover 1
-        modes:
-          position_mode:
-            rotary_step_width: 5
 
     fans:
-      - entity: fan.my_fan1
-        name: Fan 1
+      - entity: fan.ventilador_salita
+        name: Ventilador de la salita
         modes:
           speed_mode:
             changeable_direction: true
             rotary_step_width: 10
 
     media_player:
-      - entity: media_player.my_player1
-        name: MediaPlayer 1
+      - entity: media_player.tv_salita_lg
+        name: TV LG Salita
         modes:
           play_mode:
             rotary_step_width: 10
@@ -173,19 +171,10 @@ shys_m5_dial:
                 content_type: custom
 
     lock:
-      - entity: lock.my_lock1
-        name: Lock 1
-        modes:
-          lock_mode:
-            rotary_step_width: 1
-            open_on_button: false
+
 
     number:
-      - entity: number.my_number
-        name: Number 1
 
-      - entity: input_number.my_input_number
-        name: Input Number 1
 
     timer:
       - entity: timer.my_timer
