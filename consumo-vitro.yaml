@@ -9,6 +9,8 @@ logger:
 
 # Enable Home Assistant API
 api:
+  encryption:
+    key: !secret consumo_vitro__encryption_key
 
 ota:
   - platform: esphome
