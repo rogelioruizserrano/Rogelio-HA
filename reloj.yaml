@@ -65,25 +65,28 @@ display:
     num_chips: 4
     update_interval: 500ms
     lambda: |-
-      // Hasta que HA no sincroniza la hora, now() no es válido
       auto t = id(hass_time).now();
       if (!t.is_valid()) {
         it.print(0, 0, id(digit_font), "--:--");
         return;
       }
 
-      // Se pinta siempre la hora completa: así los dígitos nunca se mueven
-      it.strftime(0, 0, id(digit_font), "%H:%M", t);
+      int hh = t.hour;
+      int mm = t.minute;
+      int ss = t.second;
 
-      // Parpadeo: en los segundos impares se apagan los dos puntos
-      // borrando sólo su rectángulo (calculado a partir de la fuente)
-      if (t.second % 2) {
-      it.filled_rectangle(9, 0, 3, 8, COLOR_OFF);
-      }
+      // Dígitos en posiciones fijas: HH | MM | SS
+      it.printf( 0, 0, id(digit_font), "%d", hh / 10);
+      it.printf( 5, 0, id(digit_font), "%d", hh % 10);
 
-      // --- Ejemplos de uso de los sensores (descomentar si se quieren) ---
-      // if (!isnan(id(red).state))
-      //   it.printf(0, 0, id(digit_font), "%.0fW", id(red).state);
-      //
-      // if (!isnan(id(SOC).state))
-      //   it.printf(0, 0, id(digit_font), "%.0f%%", id(SOC).state);
+      it.printf(11, 0, id(digit_font), "%d", mm / 10);
+      it.printf(16, 0, id(digit_font), "%d", mm % 10);
+
+      it.printf(22, 0, id(digit_font), "%d", ss / 10);
+      it.printf(27, 0, id(digit_font), "%d", ss % 10);
+
+      // Separadores: dos puntitos fijos, sin parpadeo
+      it.draw_pixel_at(10, 2);
+      it.draw_pixel_at(10, 5);
+      it.draw_pixel_at(21, 2);
+      it.draw_pixel_at(21, 5);
