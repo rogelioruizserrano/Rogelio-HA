@@ -39,9 +39,10 @@ time:
     id: hass_time
 
 font:
-  - file: "pixelmix.ttf"
+  - file:
+      url: "https://raw.githubusercontent.com/hzeller/rpi-rgb-led-matrix/master/fonts/tom-thumb.bdf"
+      type: web
     id: digit_font
-    size: 8
 
 sensor:
   - platform: homeassistant
@@ -77,33 +78,23 @@ display:
       int ss = t.second;
 
       // --- Ajustes de reparto horizontal ---
-      const int P = 5;   // paso entre los dos dígitos de un mismo grupo
-      const int G = 6;   // paso del último dígito de un grupo al primero del siguiente
-      const int S = 0;   // desplazamiento del separador dentro de ese hueco
+      const int P = 4;
+      const int G = 7;
+      const int S = 1;
 
       int x = 0;
 
-      // Horas
-      it.printf(x, 0, id(digit_font), "%d", hh / 10);  x += P;
-      it.printf(x, 0, id(digit_font), "%d", hh % 10);
+      it.printf(x, 1, id(digit_font), "%d", hh / 10);  x += P;
+      it.printf(x, 1, id(digit_font), "%d", hh % 10);
       it.draw_pixel_at(x + P + S, 2, COLOR_ON);
-      it.draw_pixel_at(x + P + S, 5, COLOR_ON);
+      it.draw_pixel_at(x + P + S, 4, COLOR_ON);
       x += G;
 
-      // Minutos
-      it.printf(x, 0, id(digit_font), "%d", mm / 10);  x += P;
-      it.printf(x, 0, id(digit_font), "%d", mm % 10);
+      it.printf(x, 1, id(digit_font), "%d", mm / 10);  x += P;
+      it.printf(x, 1, id(digit_font), "%d", mm % 10);
       it.draw_pixel_at(x + P + S, 2, COLOR_ON);
-      it.draw_pixel_at(x + P + S, 5, COLOR_ON);
+      it.draw_pixel_at(x + P + S, 4, COLOR_ON);
       x += G;
 
-      // Segundos
-      it.printf(x, 0, id(digit_font), "%d", ss / 10);  x += P;
-      it.printf(x, 0, id(digit_font), "%d", ss % 10);
-      
-      // --- Ejemplos de uso de los sensores (descomentar si se quieren) ---
-      // if (!isnan(id(red).state))
-      //   it.printf(0, 0, id(digit_font), "%.0fW", id(red).state);
-      //
-      // if (!isnan(id(SOC).state))
-      //   it.printf(0, 0, id(digit_font), "%.0f%%", id(SOC).state);
+      it.printf(x, 1, id(digit_font), "%d", ss / 10);  x += P;
+      it.printf(x, 1, id(digit_font), "%d", ss % 10);
