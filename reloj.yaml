@@ -38,16 +38,22 @@ sensor:
     id: red
     entity_id: sensor.gx_device_grid_power_l1
     internal: true
+    name: Red
+    icon: "mdi:transmission-tower-export"
     
   - platform: homeassistant
     id: solar
     entity_id: sensor.generacion_solar_suma
     internal: true
+    name: Solar
+    icon: "mdi:solar-power-variant"
     
   - platform: homeassistant
     id: SOC
     entity_id: sensor.gx_device_dc_battery_charge
     internal: true
+    name: SOC
+    icon: "mdi:battery-high"
 
 display:
   - platform: max7219digit
