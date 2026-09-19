@@ -103,8 +103,8 @@ display:
       it.printf(x, 2, id(digit_font), "%d", ss % 10);
 
       // --- Ejemplos de uso de los sensores (descomentar si se quieren) ---
-      // if (!isnan(id(red).state))
-      //   it.printf(0, 2, id(digit_font), "%.0fW", id(red).state);
+      if (!isnan(id(red).state))
+         it.printf(0, 2, id(digit_font), "%.0fW", id(red).state);
       //
-      // if (!isnan(id(SOC).state))
-      //   it.printf(0, 2, id(digit_font), "%.0f%%", id(SOC).state);
+      if (!isnan(id(SOC).state))
+         it.printf(0, 2, id(digit_font), "%.0f%%", id(SOC).state);
