@@ -84,17 +84,17 @@ display:
 
       int x = 0;
 
-      it.printf(x, 1, id(digit_font), "%d", hh / 10);  x += P;
-      it.printf(x, 1, id(digit_font), "%d", hh % 10);
+      it.printf(x, 2, id(digit_font), "%d", hh / 10);  x += P;
+      it.printf(x, 2, id(digit_font), "%d", hh % 10);
       it.draw_pixel_at(x + P + S, 2, COLOR_ON);
       it.draw_pixel_at(x + P + S, 4, COLOR_ON);
       x += G;
 
-      it.printf(x, 1, id(digit_font), "%d", mm / 10);  x += P;
-      it.printf(x, 1, id(digit_font), "%d", mm % 10);
+      it.printf(x, 2, id(digit_font), "%d", mm / 10);  x += P;
+      it.printf(x, 2, id(digit_font), "%d", mm % 10);
       it.draw_pixel_at(x + P + S, 2, COLOR_ON);
       it.draw_pixel_at(x + P + S, 4, COLOR_ON);
       x += G;
 
-      it.printf(x, 1, id(digit_font), "%d", ss / 10);  x += P;
-      it.printf(x, 1, id(digit_font), "%d", ss % 10);
+      it.printf(x, 2, id(digit_font), "%d", ss / 10);  x += P;
+      it.printf(x, 2, id(digit_font), "%d", ss % 10);
