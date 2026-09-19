@@ -78,7 +78,7 @@ display:
       // Parpadeo: en los segundos impares se apagan los dos puntos
       // borrando sólo su rectángulo (calculado a partir de la fuente)
       if (t.second % 2) {
-      it.filled_rectangle(13, 0, 3, 8, COLOR_OFF);
+      it.filled_rectangle(9, 0, 3, 8, COLOR_OFF);
       }
 
       // --- Ejemplos de uso de los sensores (descomentar si se quieren) ---
