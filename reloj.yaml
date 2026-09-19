@@ -72,11 +72,16 @@ display:
         return;
       }
 
-      // Parpadeo de los dos puntos cada segundo
-      if (t.second % 2 == 0) {
-        it.strftime(0, 0, id(digit_font), "%H:%M", t);
-      } else {
-        it.strftime(0, 0, id(digit_font), "%H %M", t);
+      // Se pinta siempre la hora completa: así los dígitos nunca se mueven
+      it.strftime(0, 0, id(digit_font), "%H:%M", t);
+
+      // Parpadeo: en los segundos impares se apagan los dos puntos
+      // borrando sólo su rectángulo (calculado a partir de la fuente)
+      if (t.second % 2) {
+        int x1, y1, h, w_hh, w_hhc;
+        it.get_text_bounds(0, 0, "00",  id(digit_font), TextAlign::TOP_LEFT, &x1, &y1, &w_hh,  &h);
+        it.get_text_bounds(0, 0, "00:", id(digit_font), TextAlign::TOP_LEFT, &x1, &y1, &w_hhc, &h);
+        it.filled_rectangle(w_hh, 0, w_hhc - w_hh, 8, COLOR_OFF);
       }
 
       // --- Ejemplos de uso de los sensores (descomentar si se quieren) ---
