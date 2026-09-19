@@ -78,7 +78,7 @@ display:
 
       // --- Ajustes de reparto horizontal ---
       const int P = 3;   // paso entre los dos dígitos de un mismo grupo
-      const int G = 6;   // paso del último dígito de un grupo al primero del siguiente
+      const int G = 8;   // paso del último dígito de un grupo al primero del siguiente
       const int S = 1;   // desplazamiento del separador dentro de ese hueco
 
       int x = 0;
