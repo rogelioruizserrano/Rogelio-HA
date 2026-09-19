@@ -78,10 +78,7 @@ display:
       // Parpadeo: en los segundos impares se apagan los dos puntos
       // borrando sólo su rectángulo (calculado a partir de la fuente)
       if (t.second % 2) {
-        int x1, y1, h, w_hh, w_hhc;
-        it.get_text_bounds(0, 0, "00",  id(digit_font), TextAlign::TOP_LEFT, &x1, &y1, &w_hh,  &h);
-        it.get_text_bounds(0, 0, "00:", id(digit_font), TextAlign::TOP_LEFT, &x1, &y1, &w_hhc, &h);
-        it.filled_rectangle(w_hh, 0, w_hhc - w_hh, 8, COLOR_OFF);
+      it.filled_rectangle(13, 0, 3, 8, COLOR_OFF);
       }
 
       // --- Ejemplos de uso de los sensores (descomentar si se quieren) ---
