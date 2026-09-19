@@ -61,7 +61,7 @@ sensor:
 
 display:
   - platform: max7219digit
-    cs_pin: GPIO2
+    cs_pin: GPIO3
     num_chips: 4
     update_interval: 500ms
     lambda: |-
