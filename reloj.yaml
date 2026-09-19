@@ -86,7 +86,7 @@ display:
       it.printf(27, 0, id(digit_font), "%d", ss % 10);
 
       // Separadores: dos puntitos fijos, sin parpadeo
-      it.draw_pixel_at(10, 2);
-      it.draw_pixel_at(10, 5);
-      it.draw_pixel_at(21, 2);
-      it.draw_pixel_at(21, 5);
+      it.draw_pixel_at(10, 2, COLOR_ON);
+      it.draw_pixel_at(10, 5, COLOR_ON);
+      it.draw_pixel_at(21, 2, COLOR_ON);
+      it.draw_pixel_at(21, 5, COLOR_ON);
