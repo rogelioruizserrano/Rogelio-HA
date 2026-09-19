@@ -80,9 +80,9 @@ display:
       // --- Ajustes de reparto horizontal ---
       const int P = 4;   // paso entre los dos dígitos de un mismo grupo
       const int G = 6;   // paso del último dígito de un grupo al primero del siguiente
-      const int S = 1;   // desplazamiento del separador dentro de ese hueco
+      const int S = 0;   // desplazamiento del separador dentro de ese hueco
 
-      int x = 1;         // margen izquierdo
+      int x = 2;         // margen izquierdo
 
       // Horas
       it.printf(x, 2, id(digit_font), "%d", hh / 10);  x += P;
