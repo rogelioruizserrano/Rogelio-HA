@@ -33,19 +33,35 @@ spi:
   clk_pin: GPIO0
   mosi_pin: GPIO1
 
+sensor:
+  - platform: homeassistant
+    id: red
+    entity_id: sensor.gx_device_grid_power_l1
+    internal: true
+    
+  - platform: homeassistant
+    id: solar
+    entity_id: sensor.generacion_solar_suma
+    internal: true
+    
+  - platform: homeassistant
+    id: SOC
+    entity_id: sensor.gx_device_dc_battery_charge
+    internal: true
+
 display:
   - platform: max7219digit
     cs_pin: GPIO2
     num_chips: 4
-    intensity: 15
     lambda: |-
       it.strftime(0, 0, id(digit_font), "%H:%M", id(hass_time).now());
-      it.image(24, 0, id(my_image));
-      it.line(1, 7, 21, 7);
+#      it.line(0, 7, 31, 7);
+#      it.printf(0, 0, id(digit_font), "%.2f W", id(red));
+
 font:
   - file: "pixelmix.ttf"
     id: digit_font
-    size: 6
+    size: 8
 
 time:
   - platform: homeassistant
