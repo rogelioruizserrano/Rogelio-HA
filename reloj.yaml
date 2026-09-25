@@ -39,10 +39,14 @@ time:
     id: hass_time
 
 font:
+  - file: "pixelmix.ttf"
+    id: big_font
+    size: 8
+
   - file:
       url: "https://raw.githubusercontent.com/hzeller/rpi-rgb-led-matrix/master/fonts/tom-thumb.bdf"
       type: web
-    id: digit_font
+    id: small_font
 
 sensor:
   - platform: homeassistant
@@ -66,10 +70,9 @@ display:
     num_chips: 4
     update_interval: 500ms
     lambda: |-
-      // Hasta que HA no sincroniza la hora, now() no es válido
       auto t = id(hass_time).now();
       if (!t.is_valid()) {
-        it.print(2, 2, id(digit_font), "--:--");
+        it.print(4, 0, id(big_font), "--:--");
         return;
       }
 
@@ -77,40 +80,34 @@ display:
       int page = (t.second / 5) % 3;
 
       if (page == 0) {
+        // --- HORA: HH:MM en fuente grande, centrada ---
         int hh = t.hour;
         int mm = t.minute;
-        int ss = t.second;
 
-        const int P = 4;   // paso entre los dos dígitos de un mismo grupo
-        const int G = 6;   // paso entre grupos
-        const int S = 0;   // desplazamiento del separador
+        it.printf( 4, 0, id(big_font), "%d", hh / 10);
+        it.printf( 9, 0, id(big_font), "%d", hh % 10);
+        it.printf(18, 0, id(big_font), "%d", mm / 10);
+        it.printf(23, 0, id(big_font), "%d", mm % 10);
 
-        int x = 2;         // margen izquierdo
-
-        it.printf(x, 2, id(digit_font), "%d", hh / 10);  x += P;
-        it.printf(x, 2, id(digit_font), "%d", hh % 10);
-        it.draw_pixel_at(x + P + S, 3, COLOR_ON);
-        it.draw_pixel_at(x + P + S, 5, COLOR_ON);
-        x += G;
-
-        it.printf(x, 2, id(digit_font), "%d", mm / 10);  x += P;
-        it.printf(x, 2, id(digit_font), "%d", mm % 10);
-        it.draw_pixel_at(x + P + S, 3, COLOR_ON);
-        it.draw_pixel_at(x + P + S, 5, COLOR_ON);
-        x += G;
-
-        it.printf(x, 2, id(digit_font), "%d", ss / 10);  x += P;
-        it.printf(x, 2, id(digit_font), "%d", ss % 10);
+        // Dos puntos parpadeando cada segundo
+        if (t.second % 2 == 0) {
+          it.draw_pixel_at(15, 2, COLOR_ON);
+          it.draw_pixel_at(15, 5, COLOR_ON);
+        }
 
       } else if (page == 1) {
+        // --- POTENCIA DE RED ---
+        it.print(0, 1, id(small_font), "Red");
         if (isnan(id(red).state))
-          it.print(16, 2, id(digit_font), TextAlign::TOP_CENTER, "---");
+          it.print(31, 0, id(big_font), TextAlign::TOP_RIGHT, "---");
         else
-          it.printf(16, 2, id(digit_font), TextAlign::TOP_CENTER, "%.0fW", id(red).state);
+          it.printf(31, 0, id(big_font), TextAlign::TOP_RIGHT, "%.0f", id(red).state);
 
       } else {
+        // --- ESTADO DE BATERÍA ---
+        it.print(0, 1, id(small_font), "SOC");
         if (isnan(id(SOC).state))
-          it.print(16, 2, id(digit_font), TextAlign::TOP_CENTER, "---");
+          it.print(31, 0, id(big_font), TextAlign::TOP_RIGHT, "---");
         else
-          it.printf(16, 2, id(digit_font), TextAlign::TOP_CENTER, "%.0f%%", id(SOC).state);
+          it.printf(31, 0, id(big_font), TextAlign::TOP_RIGHT, "%.0f%%", id(SOC).state);
       }
