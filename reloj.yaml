@@ -16,6 +16,15 @@ logger:
 api:
   encryption:
     key: "bayCj/aX7SI9+61B356OBfdl2/wW8J+Fh9R/uA05Wn4="
+  actions:
+    - action: mostrar_mensaje
+      variables:
+        texto: string
+        segundos: int
+      then:
+        - lambda: |-
+            id(msg_text) = texto;
+            id(msg_until) = texto.empty() ? 0 : (millis() + segundos * 1000);
 
 ota:
   - platform: esphome
@@ -38,6 +47,17 @@ time:
   - platform: homeassistant
     id: hass_time
 
+globals:
+  - id: msg_text
+    type: std::string
+    restore_value: false
+    initial_value: '""'
+
+  - id: msg_until
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+
 font:
   - file: "pixelmix.ttf"
     id: big_font
@@ -48,66 +68,34 @@ font:
       type: web
     id: small_font
 
-sensor:
-  - platform: homeassistant
-    id: red
-    entity_id: sensor.gx_device_grid_power_l1
-    internal: true
-
-  - platform: homeassistant
-    id: solar
-    entity_id: sensor.generacion_solar_suma
-    internal: true
-
-  - platform: homeassistant
-    id: SOC
-    entity_id: sensor.gx_device_dc_battery_charge
-    internal: true
-
 display:
   - platform: max7219digit
     cs_pin: GPIO3
     num_chips: 4
     update_interval: 500ms
     lambda: |-
+      // ¿Hay un mensaje vigente? (resta con signo: inmune al desbordamiento de millis)
+      if (!id(msg_text).empty() && (int32_t)(id(msg_until) - millis()) > 0) {
+        it.print(16, 1, id(small_font), TextAlign::TOP_CENTER, id(msg_text).c_str());
+        return;
+      }
+
       auto t = id(hass_time).now();
       if (!t.is_valid()) {
         it.print(4, 0, id(big_font), "--:--");
         return;
       }
 
-      // Página 0, 1 o 2, cambiando cada 5 segundos
-      int page = (t.second / 5) % 3;
+      int hh = t.hour;
+      int mm = t.minute;
 
-      if (page == 0) {
-        // --- HORA: HH:MM en fuente grande, centrada ---
-        int hh = t.hour;
-        int mm = t.minute;
+      it.printf( 4, 0, id(big_font), "%d", hh / 10);
+      it.printf( 9, 0, id(big_font), "%d", hh % 10);
+      it.printf(18, 0, id(big_font), "%d", mm / 10);
+      it.printf(23, 0, id(big_font), "%d", mm % 10);
 
-        it.printf( 4, 0, id(big_font), "%d", hh / 10);
-        it.printf( 9, 0, id(big_font), "%d", hh % 10);
-        it.printf(18, 0, id(big_font), "%d", mm / 10);
-        it.printf(23, 0, id(big_font), "%d", mm % 10);
-
-        // Dos puntos parpadeando cada segundo
-        if (t.second % 2 == 0) {
-          it.draw_pixel_at(15, 2, COLOR_ON);
-          it.draw_pixel_at(15, 5, COLOR_ON);
-        }
-
-      } else if (page == 1) {
-        // --- POTENCIA DE RED ---
-        it.print(0, 1, id(small_font), "Red");
-        if (isnan(id(red).state))
-          it.print(31, 0, id(big_font), TextAlign::TOP_RIGHT, "---");
-        else
-          it.printf(31, 0, id(big_font), TextAlign::TOP_RIGHT, "%.0f", id(red).state);
-
-      } else {
-        // --- ESTADO DE BATERÍA ---
-        it.print(0, 1, id(small_font), "SOC");
-        if (isnan(id(SOC).state))
-          it.print(31, 0, id(big_font), TextAlign::TOP_RIGHT, "---");
-        else
-          it.printf(31, 0, id(big_font), TextAlign::TOP_RIGHT, "%.0f%%", id(SOC).state);
+      // Dos puntos parpadeando cada segundo
+      if (t.second % 2 == 0) {
+        it.draw_pixel_at(15, 2, COLOR_ON);
+        it.draw_pixel_at(15, 5, COLOR_ON);
       }
