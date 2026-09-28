@@ -63,6 +63,7 @@ sensor:
       name: "Energía"
       filters:
         - multiply: 0.001
+        - throttle: 60s
       unit_of_measurement: kWh
       accuracy_decimals: 3
     frequency:
