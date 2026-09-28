@@ -50,7 +50,7 @@ sensor:
     current:
       name: "Corriente"
       filters:
-        - throttle_average: 10s
+        - throttle_average: 2s
     voltage:
       name: "Tensión"
       filters:
@@ -58,9 +58,9 @@ sensor:
     power:
       name: "Potencia"
       filters:
-        - throttle_average: 10s
+        - throttle_average: 2s
     energy:
-      name: "Energía"
+      name: Energía
       filters:
         - multiply: 0.001
         - throttle: 60s
