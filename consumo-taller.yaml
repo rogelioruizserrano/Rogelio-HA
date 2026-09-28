@@ -5,10 +5,11 @@ esphome:
 esp32:
   board: esp32dev
   framework:
-    type: arduino
+    type: esp-idf
 
 # Enable logging
 logger:
+  baud_rate: 0 
 
 # Enable Home Assistant API
 api:
@@ -31,26 +32,60 @@ wifi:
 captive_portal:
     
 uart:
+  id: uart_pzem
   rx_pin: GPIO16
   tx_pin: GPIO17
   baud_rate: 9600
   stop_bits: 1
   
+modbus:
+  id: modbus_pzem
+  uart_id: uart_pzem
+
 sensor:
   - platform: pzemac
-    current:
-      name: "consumo-taller Current"
-    voltage:
-      name: "consumo-taller Voltage"
-    energy:
-      name: "consumo-taller Energy"
-    power:
-      name: "consumo-taller Power"
-    frequency:
-      name: "consumo-taller Frequency"
-    power_factor:
-      name: "consumo-taller Power Factor"
+    id: pzem
+    modbus_id: modbus_pzem
     update_interval: 2s
+    current:
+      name: "Corriente"
+      filters:
+        - throttle_average: 10s
+    voltage:
+      name: "Tensión"
+      filters:
+        - throttle_average: 10s
+    power:
+      name: "Potencia"
+      filters:
+        - throttle_average: 10s
+    energy:
+      name: "Energía"
+      filters:
+        - multiply: 0.001
+      unit_of_measurement: kWh
+      accuracy_decimals: 3
+    frequency:
+      name: "Frecuencia"
+      filters:
+        - throttle_average: 30s
+    power_factor:
+      name: "Factor de potencia"
+      filters:
+        - throttle_average: 10s
+
+button:
+  - platform: template
+    name: "Reset energía PZEM"
+    entity_category: config
+    on_press:
+      - pzemac.reset_energy: pzem
+
+esp32_ble_tracker:
+  scan_parameters:
+    active: true
+    interval: 1100ms
+    window: 1100ms
 
 bluetooth_proxy:
   active: true
