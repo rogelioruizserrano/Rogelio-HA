@@ -1,0 +1,94 @@
+esphome:
+  name: medidor-de-particulas-salita
+  friendly_name: medidor de particulas salita
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+  baud_rate: 0
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "BRHwydxdv4cGTqAi2BCrVTHFP8hsaBMtCznyBhIEQRY="
+
+ota:
+  password: "5aa5cfe6d5657c307c0b6d0ab0a3d805"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Medidor-De-Particulas-Salita"
+    password: "sDkH6RAH4VO4"
+
+captive_portal:
+
+web_server: # creates a web server where you can access all this stuff without home assistant (good for debugging or working headless (no HA))
+  port: 80
+  include_internal: true
+  ota: true
+
+binary_sensor: # exposes online status
+  - platform: status
+    name: "Sensor Status"
+
+uart:
+  - rx_pin: GPIO03
+    baud_rate: 9600
+    id: uart_rx_1
+  - rx_pin: GPIO16
+    tx_pin: GPIO17
+    baud_rate: 9600
+    id: uart_2
+
+sensor:
+  - platform: pm1006
+    pm_2_5:
+      name: "Medidor de particulas 2.5µm concentracion"
+    uart_id: uart_rx_1
+  - platform: mhz19
+    co2:
+      name: "MH-Z19 CO2 medidor salita"
+    update_interval: 60s
+    automatic_baseline_calibration: true
+    uart_id: uart_2
+    id: medidor_co2
+
+button: #creates a button to calibrate the sensor - this will reset the zero point so use it only when it's been 20 minutes either outside or in a room you know the co2 level is at a minimum
+  - platform: template
+    name: "Calibrate Zero (20 minutes at 400ppm)"
+    id: calibrate_zero
+    entity_category: diagnostic
+    on_press:
+      - mhz19.calibrate_zero: medidor_co2
+
+switch: # this will expose a switch to home assistant to turn on and off the ABC
+  - platform: template
+    name: "Automatic Baseline Calibration"
+    entity_category: diagnostic
+    optimistic: true
+    on_turn_on:
+      mhz19.abc_enable: medidor_co2
+    on_turn_off:
+      mhz19.abc_disable: medidor_co2
+
+output:
+  - platform: ledc
+    pin: GPIO13
+    frequency: 4882Hz
+    id: pwm_output
+  
+fan:
+  - platform: speed
+    output: pwm_output
+    name: "Ventilador medidor de particulas"
+
+bluetooth_proxy:
+  active: true

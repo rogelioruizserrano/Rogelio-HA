@@ -1,0 +1,53 @@
+esphome:
+  name: consumo-taller
+  friendly_name: consumo taller
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "cw9ZrJTt9StB8n6Q94F00Ani9xummE0FRhl+wZkKG/I="
+
+ota:
+  - platform: esphome
+    password: "0a9f56b9bcf107b58d9dedf993246c2c"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Consumo-Taller Fallback Hotspot"
+    password: "Mc3p6uItZ78t"
+
+captive_portal:
+    
+uart:
+  rx_pin: GPIO16
+  tx_pin: GPIO17
+  baud_rate: 9600
+  stop_bits: 1
+  
+sensor:
+  - platform: pzemac
+    current:
+      name: "consumo-taller Current"
+    voltage:
+      name: "consumo-taller Voltage"
+    energy:
+      name: "consumo-taller Energy"
+    power:
+      name: "consumo-taller Power"
+    frequency:
+      name: "consumo-taller Frequency"
+    power_factor:
+      name: "consumo-taller Power Factor"
+    update_interval: 2s

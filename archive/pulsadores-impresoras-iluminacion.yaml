@@ -1,0 +1,32 @@
+esphome:
+  name: pulsadores-impresoras-iluminacion
+  friendly_name: pulsadores-impresoras-iluminacion
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "DGz82Qi0L6M5bd43nnhjR1Pg3coulpZFmJoY/8VkStw="
+
+ota:
+  - platform: esphome
+    password: "e3ef9058adcc78e2912bc619b8f2e755"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Pulsadores-Impresoras-Iluminacion"
+    password: "l94utceVPPCY"
+
+captive_portal:
+    

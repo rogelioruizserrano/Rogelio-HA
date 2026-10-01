@@ -1,0 +1,32 @@
+esphome:
+  name: consumo-vitroceramica
+  friendly_name: consumo-vitroceramica
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "Zb+IcXkusmbBpOShUePq0gG1ovG4JnL0a34rZkoByTc="
+
+ota:
+  - platform: esphome
+    password: "6a4de8e113210ff29e3cba988a20ec25"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Consumo-Vitroceramica"
+    password: "f1sDahzRvMpc"
+
+captive_portal:
+    

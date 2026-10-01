@@ -1,0 +1,39 @@
+esphome:
+  name: ble
+  friendly_name: ble
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "FnBp10tB3uXR7QXFr3TKEcjq8W5owH9nUP5lYt11ioI="
+
+ota:
+  password: "9bb672aa7adb4fd68541b57a607a9f57"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Ble Fallback Hotspot"
+    password: "KJSL4UkmxW1h"
+
+captive_portal:
+
+esp32_ble_tracker:
+  scan_parameters:
+    interval: 1100ms
+    window: 1100ms
+    active: true
+
+bluetooth_proxy:
+  active: true

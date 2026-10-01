@@ -1,0 +1,41 @@
+esphome:
+  name: ledmatrix6432
+  includes:
+    - components/hub75matrix/hub75matrix.h
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "w4rTv/Sav3q+0GfcWO0ihXaUbq30xsKR67K8d5gmKkA="
+
+ota:
+  - platform: esphome
+    password: "f26301040c7a7ab4e47d87cce013e25b"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Ledmatrix6432 Fallback Hotspot"
+    password: "10Sv4yBhHDzV"
+
+captive_portal:
+
+external_components:
+  - source:
+      type: local
+      path: components
+
+display:
+  - platform: hub75matrix
+    id: my_matrix

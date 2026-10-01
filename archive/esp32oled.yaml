@@ -1,0 +1,110 @@
+esphome:
+  name: esp32oled
+  friendly_name: esp32oled
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+  level: DEBUG
+  baud_rate: 0
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "qqvLZgPjl1U5TPhBbdTFs6HpAbE8k6l5yOgp8aLHLkA="
+
+ota:
+  password: "e87c9fee361ac8ee605bff42d09d0175"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Esp32Oled Fallback Hotspot"
+    password: "Om7iqL7Z9doA"
+
+captive_portal:
+
+i2c:
+  sda: 4
+  scl: 15
+  frequency: 800kHz
+
+time:
+  - platform: homeassistant
+    id: hass_time
+
+sensor:
+  - platform: homeassistant
+    id: red
+    entity_id: sensor.sb5_0_1av_41_936_metering_power_absorbed
+    internal: true
+    
+  - platform: homeassistant
+    id: solar
+    entity_id: sensor.generacion_solar_unknown
+    internal: true
+    
+  - platform: homeassistant
+    id: excedentes
+    entity_id: sensor.sb5_0_1av_41_936_metering_power_supplied
+    internal: true
+
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    id: my_display
+    reset_pin: 16
+    address: 0x3C
+    pages:
+      - id: page1
+        lambda: |-
+          it.strftime(0, 0, id(roboto15), "%H:%M-%A", id(hass_time).now());
+          it.print(0, 17, id(roboto15), "Red");
+          if (id(red).has_state()) {
+            it.printf(0, 34, id(roboto30), "%.0f W",id(red).state);
+          }
+      - id: page2
+        lambda: |-
+          it.strftime(0, 0, id(roboto15), "%H:%M-%A", id(hass_time).now());
+          it.print(0, 17, id(roboto15), "Solar");
+          if (id(solar).has_state()) {
+            it.printf(0, 34, id(roboto30), "%.0f W",id(solar).state);
+          }
+      - id: page3
+        lambda: |-
+          it.strftime(0, 0, id(roboto15), "%H:%M-%A", id(hass_time).now());
+          it.print(0, 17, id(roboto15), "Excedentes");
+          if (id(excedentes).has_state()) {
+            it.printf(0, 34, id(roboto30), "%.0f W",id(excedentes).state);
+          }
+
+
+
+interval:
+  - interval: 3s
+    then:
+      - display.page.show_next: my_display
+      - component.update: my_display   
+  
+font:
+  - file: "gfonts://Roboto"
+    id: roboto15
+    size: 15
+  - file: "gfonts://Roboto"
+    id: roboto20
+    size: 20
+  - file: "gfonts://Roboto"
+    id: roboto23
+    size: 23
+  - file: "gfonts://Roboto"
+    id: roboto30
+    size: 30
+  - file: "gfonts://Roboto"
+    id: roboto40
+    size: 40

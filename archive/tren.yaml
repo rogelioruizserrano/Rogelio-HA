@@ -1,0 +1,32 @@
+esphome:
+  name: tren
+  friendly_name: tren
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "/SVdI8Es0eB2YskOakksiPhRc9jDTO6pFJ0sFP0hx1c="
+
+ota:
+  - platform: esphome
+    password: "63e6c2fdee067929f7417c99b5b9e3b3"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Tren Fallback Hotspot"
+    password: "LYPvc8d1cxjB"
+
+captive_portal:
+    

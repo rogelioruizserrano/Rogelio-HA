@@ -1,0 +1,41 @@
+esphome:
+  name: sensorvalvulatermos
+
+esp8266:
+  board: esp01_1m
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+ota:
+  - platform: esphome
+    password: "89cfd7ec05d6b07dec113b12568fcbc8"
+
+wifi:
+  ssid: "RogeWifi2_IoT"
+  password: "AquiMeConectoNadaMasQueYo"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Sensorvalvulatermos"
+    password: "AaZiprx4rA1R"
+
+captive_portal:
+
+sensor:
+  - platform: pulse_counter
+    pin: GPIO14
+    name: "Consumo agua caliente"
+    update_interval: 1s
+    unit_of_measurement: 'L/min'
+    filters:
+      - multiply: 0.00180832
+      
+switch:
+  - platform: gpio
+    name: "Valvula agua caliente"
+    pin: GPIO4
+    restore_mode: ALWAYS_ON

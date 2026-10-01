@@ -1,0 +1,47 @@
+esphome:
+  name: consumo-azotea-taller
+  platform: ESP8266
+  board: esp01
+
+# Enable logging
+logger:
+  baud_rate: 0
+# Enable Home Assistant API
+api:
+
+ota:
+  - platform: esphome
+    password: "766707efcf4cd1e39472406cfd09bbbe"
+
+wifi:
+  ssid: "RogeWifi2_IoT"
+  password: "AquiMeConectoNadaMasQueYo"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Consumo-Azotea-Taller"
+    password: "uIpVFlrkKKhe"
+
+captive_portal:
+
+uart:
+  rx_pin: GPIO03
+  tx_pin: GPIO01
+  baud_rate: 9600
+  stop_bits: 1
+  
+sensor:
+  - platform: pzemac
+    current:
+      name: "consumo-azotea-taller Current"
+    voltage:
+      name: "consumo-azotea-taller Voltage"
+    energy:
+      name: "consumo-azotea-taller Energy"
+    power:
+      name: "consumo-azotea-taller Power"
+    frequency:
+      name: "consumo-azotea-taller Frequency"
+    power_factor:
+      name: "consumo-azotea-taller Power Factor"
+    update_interval: 2s

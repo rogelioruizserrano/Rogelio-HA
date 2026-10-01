@@ -1,0 +1,43 @@
+esphome:
+  name: ledmatrix6432
+  friendly_name: LedMatrix6432
+  includes:
+    - ledpanel/led_matrix.h
+
+external_components:
+  - source:
+      type: local
+      path: ./ledpanel
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "w4rTv/Sav3q+0GfcWO0ihXaUbq30xsKR67K8d5gmKkA="
+
+ota:
+  - platform: esphome
+    password: "f26301040c7a7ab4e47d87cce013e25b"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Ledmatrix6432 Fallback Hotspot"
+    password: "10Sv4yBhHDzV"
+
+captive_portal:
+
+custom_component:
+  - lambda: |-
+      auto matrix = new LEDMatrixDisplay();
+      App.register_component(matrix);

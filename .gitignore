@@ -8,3 +8,6 @@
 **/src/
 **/platformio.ini
 /secrets.yaml
+secrets.yaml
+.esphome/
+__pycache__/

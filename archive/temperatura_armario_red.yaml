@@ -1,0 +1,44 @@
+esphome:
+  name: temperatura_armario_red
+  platform: ESP8266
+  board: nodemcu
+
+wifi:
+  ssid: "RogeWifi2_IoT"
+  password: "AquiMeConectoNadaMasQueYo"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Temperatura Armario Red"
+    password: "pK6XhunyUNNZ"
+
+captive_portal:
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+ota:
+
+dallas:
+  - pin: D2
+    update_interval: 5s
+
+sensor:
+  - platform: dallas
+    address: 0xA53C01B556EA2528
+    name: "Temperatura armario de red"
+    
+output:
+  - platform: esp8266_pwm
+    pin: D0
+    frequency: 10000 Hz
+    id: pwm_output
+
+    
+fan:
+  - platform: speed
+    output: pwm_output
+    name: "Ventilador armario red"
