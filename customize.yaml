@@ -1,0 +1,70 @@
+# =============================================================================
+# customize.yaml
+# -----------------------------------------------------------------------------
+# Incluido desde configuration.yaml mediante:
+#     homeassistant:
+#       customize: !include customize.yaml
+#
+# Diccionario de personalizaciones por entity_id. Útil para asignar
+# device_class / state_class / unit_of_measurement a sensores que no los
+# expongan correctamente desde su integración (típico de sensores creados
+# por plantillas legacy, MQTT manuales, o platforms antiguas).
+#
+# NOTA: Las integraciones modernas suelen exponer estos atributos nativamente.
+# Antes de añadir aquí, comprueba si el sensor ya los tiene en
+# "Herramientas para desarrolladores → Estados".
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# Energía solar y eléctrica
+# -----------------------------------------------------------------------------
+
+sensor.generacion_solar_kwh:
+  device_class: energy
+  state_class: total_increasing
+  unit_of_measurement: kWh
+
+sensor.consumo_electrodomesticos_no_medibles:
+  device_class: energy
+  state_class: total_increasing
+  unit_of_measurement: kWh
+
+# Corregido: antes ponía `nit_of_measurement` (sin la "u" inicial),
+# lo que hacía que la unidad se ignorara silenciosamente.
+sensor.gx_device_pv_on_output_power_l1:
+  device_class: power
+  unit_of_measurement: W
+
+
+# -----------------------------------------------------------------------------
+# Agua caliente
+# -----------------------------------------------------------------------------
+
+#sensor.contador_agua_caliente_diario:
+#  device_class: water
+#  state_class: total_increasing
+#  unit_of_measurement: L
+
+#sensor.contador_agua_caliente_mensual:
+#  device_class: water
+#  state_class: total_increasing
+#  unit_of_measurement: L
+
+#sensor.contador_agua_caliente_anual:
+#  device_class: water
+#  state_class: total_increasing
+#  unit_of_measurement: L
+
+sensor.agua_caliente_counter_value:
+  device_class: water
+  state_class: total_increasing
+  unit_of_measurement: L
+
+sensor.agua_caliente_pulse_counter_frequency_value:
+  device_class: volume_flow_rate
+  state_class: measurement
+  unit_of_measurement: L/min
+
+climate.casa:
+  target_temp_step: 0.5

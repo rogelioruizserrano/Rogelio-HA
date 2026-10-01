@@ -1,0 +1,43 @@
+# =============================================================================
+# google_assistant.yaml
+# -----------------------------------------------------------------------------
+# Incluido desde configuration.yaml mediante:
+#     google_assistant: !include google_assistant.yaml
+#
+# Configuración de la integración Google Assistant (control por voz vía
+# Google Home / asistente). El service_account es la clave JSON descargada
+# de Google Cloud Console (proyecto hass-49002) y debe estar en /config/.
+# =============================================================================
+
+project_id: hass-49002
+service_account: !include SERVICE_ACCOUNT.JSON
+report_state: true
+
+
+# -----------------------------------------------------------------------------
+# Dominios expuestos a Google Assistant
+# -----------------------------------------------------------------------------
+# Cualquier entidad de estos dominios queda expuesta por defecto, salvo que
+# se marque explícitamente `expose: false` en entity_config.
+
+exposed_domains:
+  - switch
+  - light
+  - fan
+  - cover
+  - lock
+  - media_player
+  - scene
+
+
+# -----------------------------------------------------------------------------
+# Configuración por entidad
+# -----------------------------------------------------------------------------
+# Aquí se renombran entidades para el reconocimiento por voz, se asignan
+# habitaciones, o se exponen/ocultan individualmente.
+
+entity_config:
+  scene.modo_spa_bano:
+    name: "Modo Spa"
+    expose: true
+    room: "Baño"

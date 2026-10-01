@@ -1,0 +1,82 @@
+mqtt:
+  sensor:
+    - name: "Temperatura triac freeds maestro"
+      unique_id: freeds_maes_temp_triac
+      state_topic: "freeds_maes/tempTriac"
+      unit_of_measurement: "°C"
+      device_class: temperature
+      state_class: measurement
+
+    - name: "Watios Derivando a termo 100L"
+      unique_id: freeds_maes_watts
+      state_topic: "freeds_maes/calcWatts"
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+
+    - name: "Temperatura triac freeds esclavo"
+      unique_id: freeds_excla_temp_triac
+      state_topic: "freeds_excla/tempTriac"
+      unit_of_measurement: "°C"
+      device_class: temperature
+      state_class: measurement
+
+    - name: "Watios Derivando a termo 50L"
+      unique_id: freeds_excla_watts
+      state_topic: "freeds_excla/calcWatts"
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+
+    - name: "Estado PWM Maestro"
+      unique_id: estado_pwm_maes
+      state_topic: "freeds_maes/stat/pwm"
+
+    - name: "Estado PWM Esclavo"
+      unique_id: estado_pwm_escla
+      state_topic: "freeds_excla/stat/pwm"
+
+  switch:
+    - name: "PWM Manual Termo 100L"
+      unique_id: pwm_manual_termo_100l
+      command_topic: freeds_maes/cmnd
+      state_topic: freeds_maes/stat/pwm
+      payload_on: '{"command":"pwmman","payload":"0"}'
+      payload_off: '{"command":"pwmman","payload":"1"}'
+      state_on: "AUTO"
+      state_off: "MAN"
+      optimistic: false
+      retain: true
+
+    - name: "Activa PWM Termo 100L"
+      unique_id: activa_pwm_termo_100l
+      command_topic: freeds_maes/cmnd
+      state_topic: freeds_maes/stat/pwm
+      payload_on: '{"command":"pwm","payload":"1"}'
+      payload_off: '{"command":"pwm","payload":"0"}'
+      state_on: "AUTO"
+      state_off: "OFF"
+      optimistic: false
+      retain: true
+
+    - name: "PWM Manual Termo 50L"
+      unique_id: pwm_manual_termo_50l
+      command_topic: freeds_excla/cmnd
+      state_topic: freeds_excla/stat/pwm
+      payload_on: '{"command":"pwmman","payload":"0"}'
+      payload_off: '{"command":"pwmman","payload":"1"}'
+      state_on: "AUTO"
+      state_off: "MAN"
+      optimistic: false
+      retain: true
+
+    - name: "Activa PWM Termo 50L"
+      unique_id: activa_pwm_termo_50l
+      command_topic: freeds_excla/cmnd
+      state_topic: freeds_excla/stat/pwm
+      payload_on: '{"command":"pwm","payload":"1"}'
+      payload_off: '{"command":"pwm","payload":"0"}'
+      state_on: "AUTO"
+      state_off: "OFF"
+      optimistic: false
+      retain: true

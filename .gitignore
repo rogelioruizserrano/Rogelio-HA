@@ -1,0 +1,33 @@
+# Secretos y credenciales
+secrets.yaml
+esphome/secrets.yaml
+.ssh/
+SERVICE_ACCOUNT.JSON
+.google.token
+*.pem
+*.key
+
+# Estado interno de HA
+.storage/
+.cloud/
+.HA_VERSION
+home-assistant_v2.db*
+*.db
+*.db-*
+*.log*
+deps/
+tts/
+__pycache__/
+
+# ESPHome
+esphome/.esphome/
+.esphome/
+
+# Pesados / regenerables
+custom_components/
+www/community/
+backups/
+media/
+image/
+solcast_solar/
+esphome/

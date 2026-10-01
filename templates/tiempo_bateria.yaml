@@ -1,0 +1,28 @@
+- sensor:
+  - default_entity_id: sensor.tiempo_en_segundos
+    name: Tiempo en segundos
+    state: '{{ states(''sensor.system_battery_time_to_go'') | int }}'
+  - default_entity_id: sensor.tiempo_en_minutos
+    name: Tiempo en minutos
+    state: '{{ (states(''sensor.system_battery_time_to_go'') | int / 60) | round(0)
+      }}'
+  - default_entity_id: sensor.tiempo_formateado
+    name: Tiempo formateado
+    state: '{% set seconds = states(''sensor.system_battery_time_to_go'') | int %}
+      {{ ''%02d:%02d:%02d'' | format(seconds // 3600, (seconds % 3600) // 60, seconds
+      % 60) }}'
+  - unique_id: hora_fin_bateria
+    default_entity_id: sensor.hora_fin_bateria
+    icon: mdi:clock
+    name: Hora de fin de batería
+    state: "{% set current_time = states('sensor.time') %} {% set time_to_add = (states('sensor.system_battery_time_to_go')
+      | int) / 60 %} {% set current_hour = current_time.split(':')[0] | int %} {%
+      set current_minute = current_time.split(':')[1] | int %} {% set new_minute =
+      current_minute + time_to_add %} {% set new_hour = current_hour + (new_minute
+      // 60) %} {% set final_minute = new_minute % 60 %} {% set final_hour = new_hour
+      % 24 %} {% set days_ahead = (new_hour // 24) %} {% set target_day = (now() +
+      timedelta(days=days_ahead)) %} {% set day_en = target_day.strftime('%a') %}
+      {% set dias = {\n  'Mon': 'Lunes',\n  'Tue': 'Martes',\n  'Wed': 'Miércoles',\n
+      \ 'Thu': 'Jueves',\n  'Fri': 'Viernes',\n  'Sat': 'Sábado',\n  'Sun': 'Domingo'\n}
+      %} {% set dia = dias[day_en] if day_en in dias else day_en %} {{ dia }} {{ target_day.strftime('%d/%m')
+      }} {{ '%02d' % final_hour }}:{{ '%02d' % final_minute }}"

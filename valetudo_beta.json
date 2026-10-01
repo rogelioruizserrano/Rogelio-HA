@@ -1,0 +1,93 @@
+{
+  "embedded": false,
+  "robot": {
+    "implementation": "CecotecCongaRobot",
+    "implementationSpecificConfig": {
+      "ip": "127.0.0.1"
+    }
+  },
+  "webserver": {
+    "port": 8080,
+    "basicAuth": {
+      "enabled": false,
+      "username": "valetudo",
+      "password": "valetudo"
+    },
+    "blockExternalAccess": true
+  },
+  "mqtt": {
+    "enabled": true,
+    "connection": {
+      "host": "core-mosquitto",
+      "port": 1883,
+      "tls": {
+        "enabled": false,
+        "ca": "",
+        "ignoreCertificateErrors": false
+      },
+      "authentication": {
+        "credentials": {
+          "enabled": true,
+          "username": "addons",
+          "password": "shohvat8iba0yaru2oXaxu6aeH4muree3phop3quaelai0ieNoozeeQuie7jeiVu"
+        },
+        "clientCertificate": {
+          "enabled": false,
+          "certificate": "",
+          "key": ""
+        }
+      }
+    },
+    "identity": {
+      "identifier": "r2d2"
+    },
+    "interfaces": {
+      "homie": {
+        "enabled": false,
+        "addICBINVMapProperty": false,
+        "cleanAttributesOnShutdown": false
+      },
+      "homeassistant": {
+        "enabled": true,
+        "cleanAutoconfOnShutdown": false
+      }
+    },
+    "customizations": {
+      "topicPrefix": "valetudo",
+      "provideMapData": true
+    },
+    "optionalExposedCapabilities": []
+  },
+  "ntpClient": {
+    "enabled": true,
+    "server": "pool.ntp.org",
+    "port": 123,
+    "interval": 28800000,
+    "timeout": 10000
+  },
+  "timers": {},
+  "logLevel": "info",
+  "debug": {
+    "debugHassAnchors": false,
+    "storeRawFDSUploads": false
+  },
+  "networkAdvertisement": {
+    "enabled": true
+  },
+  "updater": {
+    "enabled": true,
+    "updateProvider": {
+      "type": "github",
+      "implementationSpecificConfig": {}
+    }
+  },
+  "oobe": {
+    "welcomeDialogDismissed": false
+  },
+  "valetudo": {
+    "customizations": {
+      "friendlyName": ""
+    }
+  },
+  "_version": "2026.03"
+}

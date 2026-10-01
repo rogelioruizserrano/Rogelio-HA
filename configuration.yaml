@@ -1,0 +1,43 @@
+default_config:
+homeassistant:
+  allowlist_external_dirs:
+    - "/config"
+  media_dirs:
+    media: /media
+  auth_providers:
+    - type: homeassistant
+  customize: !include customize.yaml
+  packages: !include_dir_named packages
+frontend:
+  themes: !include_dir_merge_named themes
+
+history:
+logbook:
+my:
+tts: !include tts.yaml
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+utility_meter: !include utility_meter.yaml
+recorder: !include recorder.yaml
+light: !include light.yaml
+switch: !include switch.yaml
+webhook:
+shell_command: !include shell_commands.yaml
+template: !include template.yaml
+sensor: !include sensor.yaml
+google_assistant: !include google_assistant.yaml
+logger:
+  default: error
+
+media_source:
+
+ffmpeg:
+  ffmpeg_bin: /usr/bin/ffmpeg
+
+python_script:
+
+home_connect_alt:
+  client_id: !secret home_connect_client_id
+  client_secret: !secret home_connect_client_secret
+

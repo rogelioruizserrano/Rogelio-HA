@@ -1,0 +1,11 @@
+info  2022-06-10 00:42:53: Logging to console and directory: '/config/zigbee2mqtt/log/2022-06-10.00-42-53' filename: log.txt
+info  2022-06-10 00:42:53: Starting Zigbee2MQTT version 1.25.2 (commit #unknown)
+info  2022-06-10 00:42:53: Starting zigbee-herdsman (0.14.34)
+error 2022-06-10 00:42:53: Error while starting zigbee-herdsman
+error 2022-06-10 00:42:53: Failed to start zigbee
+error 2022-06-10 00:42:53: Check https://www.zigbee2mqtt.io/guide/installation/20_zigbee2mqtt-fails-to-start.html for possible solutions
+error 2022-06-10 00:42:53: Exiting...
+error 2022-06-10 00:42:53: Error: spawn udevadm ENOENT
+    at Process.ChildProcess._handle.onexit (node:internal/child_process:283:19)
+    at onErrorNT (node:internal/child_process:478:16)
+    at processTicksAndRejections (node:internal/process/task_queues:83:21)

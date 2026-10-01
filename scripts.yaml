@@ -1,0 +1,81 @@
+aprender_ir_homecinema:
+  sequence:
+  - service: remote.learn_command
+    data:
+      device: homecinema
+      command:
+      - power
+      - volume up
+      - volume down
+      - mibox
+      command_type: ir
+    target:
+      entity_id: remote.broadlink_rm_pro
+  mode: single
+  alias: Aprender ir home cinema
+  icon: mdi:access-point
+aprender_pantalla_proyector:
+  alias: Aprender pantalla proyector
+  sequence:
+  - service: remote.learn_command
+    data:
+      device: pantalla_proyector
+      command_type: rf
+      command:
+      - down
+      - stop
+      - up
+    target:
+      entity_id: remote.broadlink_rm_pro
+  mode: single
+  icon: mdi:access-point
+aprender_ir_proyector:
+  alias: Aprender ir proyector
+  sequence:
+  - service: remote.learn_command
+    data:
+      device: proyector
+      command:
+      - 'on'
+      - 'off'
+      - hdmi1
+      - hdmi2
+      command_type: ir
+    target:
+      entity_id: remote.broadlink_rm_pro
+  mode: single
+  icon: mdi:access-point
+encender_a_c:
+  alias: Encender A/C
+  sequence:
+  - service: switch.turn_on
+    data: {}
+    target:
+      entity_id: switch.rele_aire_acondicionado
+  - delay:
+      hours: 0
+      minutes: 1
+      seconds: 0
+      milliseconds: 0
+  - service: climate.turn_on
+    data: {}
+    target:
+      entity_id: climate.casa
+  mode: single
+  icon: mdi:air-conditioner
+apagar_a_c:
+  alias: Apagar A/C
+  sequence:
+  - service: climate.turn_off
+    data: {}
+  - delay:
+      hours: 0
+      minutes: 2
+      seconds: 0
+      milliseconds: 0
+  - service: switch.turn_off
+    data: {}
+    target:
+      entity_id: switch.rele_aire_acondicionado
+  mode: single
+  icon: mdi:air-conditioner

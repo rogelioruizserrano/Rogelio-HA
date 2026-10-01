@@ -1,0 +1,43 @@
+#- platform: xiaomi_miio_philipslight
+#  name: Lampara techo cuarto azotea
+#  host: 192.168.1.253
+#  token: b7e75bff76806e4e96a35c7e2be55c63
+#  model: philips.light.ceiling
+
+#- platform: xiaomi_miio_philipslight
+#  name: Lamparita de escritorio Rakel
+#  host: 192.168.1.58
+#  token: b671668ac325a3623b7356392fdf2edf
+#  model: philips.light.mono1
+
+- platform: switch
+  name: Lampara techo cine
+  entity_id: switch.luz_techo_00_00_00_cine_interior
+
+- platform: switch
+  name: Lampara techo entradita
+  entity_id: switch.luz_techo_00_00_00_entradita_interior
+
+- platform: switch
+  name: Lampara escalera bajo
+  entity_id: switch.switch_escalera_1_00_00_00_escalera_interior
+
+- platform: switch
+  name: Lampara escalera hall
+  entity_id: switch.switch_escalera_2_00_00_00_escalera_interior
+  
+- platform: switch
+  name: Lampara techo despensa
+  entity_id: switch.luz_despensa_00_00_00_despensa_interior
+  
+- platform: switch
+  name: Lampara techo bano
+  entity_id: switch.switch_luz_00_00_00_bano_interior
+
+- platform: switch
+  name: Luz puerta azotea
+  entity_id: switch.luz_puerta_azotea_relay
+
+- platform: switch
+  name: Luz de taller
+  entity_id: switch.switch_pulsador_doble_pared_00_01_00_taller_interior_left

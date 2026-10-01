@@ -1,0 +1,312 @@
+db_url: mysql://homeassistant:homeassistant@core-mariadb/homeassistant?charset=utf8mb4
+auto_purge: true
+auto_repack: true
+purge_keep_days: 7
+commit_interval: 5
+include:
+  entities:
+
+    # ===== Red eléctrica =====
+    - select.octopus_energy_contador
+    - sensor.consumo_red_dia_en_eur
+    - sensor.octopus_energy_contador_llano
+    - sensor.octopus_energy_contador_llano_cost
+    - sensor.octopus_energy_contador_punta
+    - sensor.octopus_energy_contador_punta_cost
+    - sensor.octopus_energy_contador_valle
+    - sensor.octopus_energy_contador_valle_cost
+    - sensor.excedentes_diario_compensation
+    - sensor.precio_electricidad_tramos
+    - sensor.red
+    - sensor.red_anual
+    - sensor.red_diario
+    - sensor.red_mensual
+    - sensor.red_total
+    - sensor.shellyem_244cab418bca_channel_1_energy
+    - sensor.shellyem_244cab418bca_channel_1_energy_returned
+    - sensor.shellyem_244cab418bca_channel_1_energy_returned_compensation
+    - sensor.shellyem_244cab418bca_channel_1_power
+    - sensor.shellyem_244cab418bca_channel_1_voltage
+    - sensor.shellyem_244cab418bca_channel_2_power
+    - sensor.shellyem_244cab418bca_channel_2_energy
+
+    # ===== Excedentes =====
+    - sensor.excedentes
+    - sensor.excedentes_anual
+    - sensor.excedentes_casa_hora_eur
+    - sensor.excedentes_diario
+    - sensor.excedentes_mensual
+    - sensor.ratio_consumo_excedentes
+    - sensor.multiplus_ii_48_5000_70_50_id_276_energy_from_ac_out_to_ac_in_1
+
+    # ===== Solar / PV (Solcast) =====
+    - sensor.forecast_remaining_today
+    - sensor.solcast_pv_forecast_forecast_today
+
+    # ===== Solar / PV =====
+    - sensor.generacion_solar_suma
+    - sensor.generacion_solar_anual
+    - sensor.generacion_solar_diaria
+    - sensor.generacion_solar_mensual
+    - sensor.solar
+    - sensor.string_sureste
+    - sensor.string_suroeste
+
+    # ===== Solar / PV (Victron) =====
+    - sensor.gx_device_pv_on_output_power_l1
+    - sensor.gx_device_pv_power
+    - sensor.victron_system_dc_pv_power_kwh
+    - sensor.victron_system_dc_pv_power_kwh_ano
+    - sensor.victron_system_dc_pv_power_kwh_dia
+    - sensor.victron_system_dc_pv_power_kwh_mes
+
+    # ===== Solar / PV (SMA Sunny Boy) =====
+    - sensor.sb5_0_1av_41_936_pv_current_a
+    - sensor.sb5_0_1av_41_936_pv_current_b
+    - sensor.sb5_0_1av_41_936_pv_power
+    - sensor.sb5_0_1av_41_936_pv_power_a
+    - sensor.sb5_0_1av_41_936_pv_power_b
+    - sensor.sb5_0_1av_41_936_pv_voltage_a
+    - sensor.sb5_0_1av_41_936_pv_voltage_b
+    - sensor.sma_sunnyboy_5_power_total
+
+    # ===== Solar / PV (FreeDS) =====
+    - sensor.temperatura_triac_freeds_exclavo
+    - sensor.temperatura_triac_freeds_maestro
+
+    # ===== Batería (SoC / carga / descarga) =====
+    - sensor.bateria_carga
+    - sensor.bateria_carga_anual
+    - sensor.bateria_carga_diario
+    - sensor.bateria_carga_kwh
+    - sensor.bateria_carga_mensual
+    - sensor.bateria_descarga_anual
+    - sensor.bateria_descarga_diario
+    - sensor.bateria_descarga_mensual
+    - sensor.bateria_soc
+    - sensor.hora_fin_bateria
+
+    # ===== Batería (celdas Basen) =====
+    - sensor.bateria_basen_maximum_cell_voltage
+    - sensor.bateria_basen_minimum_cell_voltage
+
+    # ===== Batería (Tianpower BMS) =====
+    - sensor.esp32_pantalla_tianpower_bms_ble_device0_cell_voltage_1
+    - sensor.esp32_pantalla_tianpower_bms_ble_device0_cell_voltage_10
+    - sensor.esp32_pantalla_tianpower_bms_ble_device0_cell_voltage_11
+    - sensor.esp32_pantalla_tianpower_bms_ble_device0_cell_voltage_12
+    - sensor.esp32_pantalla_tianpower_bms_ble_device0_cell_voltage_13
+    - sensor.esp32_pantalla_tianpower_bms_ble_device0_cell_voltage_14
+    - sensor.esp32_pantalla_tianpower_bms_ble_device0_cell_voltage_15
+    - sensor.esp32_pantalla_tianpower_bms_ble_device0_cell_voltage_16
+    - sensor.esp32_pantalla_tianpower_bms_ble_device0_cell_voltage_2
+    - sensor.esp32_pantalla_tianpower_bms_ble_device0_cell_voltage_3
+    - sensor.esp32_pantalla_tianpower_bms_ble_device0_cell_voltage_4
+    - sensor.esp32_pantalla_tianpower_bms_ble_device0_cell_voltage_5
+    - sensor.esp32_pantalla_tianpower_bms_ble_device0_cell_voltage_6
+    - sensor.esp32_pantalla_tianpower_bms_ble_device0_cell_voltage_7
+    - sensor.esp32_pantalla_tianpower_bms_ble_device0_cell_voltage_8
+    - sensor.esp32_pantalla_tianpower_bms_ble_device0_cell_voltage_9
+    - sensor.esp32_pantalla_tianpower_bms_ble_device0_current
+    - sensor.esp32_pantalla_tianpower_bms_ble_device0_delta_cell_voltage
+    - sensor.esp32_pantalla_tianpower_bms_ble_device0_total_voltage
+    - sensor.esp32_pantalla_tianpower_bms_ble_device1_cell_voltage_1
+    - sensor.esp32_pantalla_tianpower_bms_ble_device1_cell_voltage_10
+    - sensor.esp32_pantalla_tianpower_bms_ble_device1_cell_voltage_11
+    - sensor.esp32_pantalla_tianpower_bms_ble_device1_cell_voltage_12
+    - sensor.esp32_pantalla_tianpower_bms_ble_device1_cell_voltage_13
+    - sensor.esp32_pantalla_tianpower_bms_ble_device1_cell_voltage_14
+    - sensor.esp32_pantalla_tianpower_bms_ble_device1_cell_voltage_15
+    - sensor.esp32_pantalla_tianpower_bms_ble_device1_cell_voltage_16
+    - sensor.esp32_pantalla_tianpower_bms_ble_device1_cell_voltage_2
+    - sensor.esp32_pantalla_tianpower_bms_ble_device1_cell_voltage_3
+    - sensor.esp32_pantalla_tianpower_bms_ble_device1_cell_voltage_4
+    - sensor.esp32_pantalla_tianpower_bms_ble_device1_cell_voltage_5
+    - sensor.esp32_pantalla_tianpower_bms_ble_device1_cell_voltage_6
+    - sensor.esp32_pantalla_tianpower_bms_ble_device1_cell_voltage_7
+    - sensor.esp32_pantalla_tianpower_bms_ble_device1_cell_voltage_8
+    - sensor.esp32_pantalla_tianpower_bms_ble_device1_cell_voltage_9
+    - sensor.esp32_pantalla_tianpower_bms_ble_device1_current
+    - sensor.esp32_pantalla_tianpower_bms_ble_device1_delta_cell_voltage
+    - sensor.esp32_pantalla_tianpower_bms_ble_device1_total_voltage
+
+    # ===== Inversor / Cerbo GX =====
+    - number.gx_device_ess_max_charge_current
+    - sensor.gx_device_ac_active_input_source
+    - sensor.gx_device_dc_battery_current
+    - sensor.gx_device_dc_battery_power
+    - sensor.gx_device_dc_battery_voltage
+    - sensor.gx_device_dc_battery_charge
+    - sensor.gx_device_grid_power_l1
+
+    # ===== Inversor (Multiplus II) =====
+    - sensor.multiplus_ii_48_5000_70_50_id_276_corriente_de_entrada_l1
+    - sensor.multiplus_ii_48_5000_70_50_id_276_frecuencia_de_entrada_l1
+    - sensor.multiplus_ii_48_5000_70_50_id_276_tension_de_entrada_l1
+
+    # ===== Ahorro / Costes generales =====
+    - sensor.ahorro_casa_coste_por_dia
+    - sensor.ahorro_casa_coste_por_mes
+
+    # ===== Termos / ACS =====
+    - binary_sensor.humedad_termos_inundacion
+    - sensor.agua_caliente_counter_value
+    - sensor.agua_caliente_pulse_counter_frequency_value
+    - sensor.agua_caliente_counter_value_cost
+    - sensor.consumo_termos
+    - sensor.contador_agua_caliente_anual
+    - sensor.contador_agua_caliente_diario
+    - sensor.contador_agua_caliente_diario_cost
+    - sensor.contador_agua_caliente_mensual
+    - sensor.switch_termo_100l_00_00_00_cuartillo_azotea_interior_power
+    - sensor.termos_kwh
+    - sensor.energia_termos
+
+    # ===== Climatización =====
+    - sensor.casa_temperatura_ambiente
+    - sensor.aire_acondicionado_energy
+    - sensor.aire_acondicionado_power
+    - sensor.radiador_cocina_anual
+    - sensor.radiador_cocina_coste_hora
+    - sensor.radiador_cocina_coste_por_ano
+    - sensor.radiador_cocina_coste_por_dia
+    - sensor.radiador_cocina_coste_por_mes
+    - sensor.radiador_cocina_diario
+    - sensor.radiador_cocina_mensual
+    - sensor.radiador_cocina_por_hora
+    - sensor.radiador_cocina_power
+    - sensor.radiador_salita_anual
+    - sensor.radiador_salita_coste_hora
+    - sensor.radiador_salita_coste_por_ano
+    - sensor.radiador_salita_coste_por_dia
+    - sensor.radiador_salita_coste_por_mes
+    - sensor.radiador_salita_diario
+    - sensor.radiador_salita_mensual
+    - sensor.radiador_salita_por_hora
+    - sensor.radiador_salita_power
+
+    # ===== Electrodomésticos =====
+    - sensor.consumo_horno_micro_cafetera_pzem_004t_v3_power
+    - sensor.horno_coste_por_ano
+    - sensor.horno_coste_por_dia
+    - sensor.horno_coste_por_mes
+    - sensor.horno_energy
+    - sensor.horno_kwh
+    - sensor.horno_power
+    - sensor.lavadora_anual
+    - sensor.lavadora_diario
+    - sensor.lavadora_mensual
+    - sensor.lavadora_sonoff_pow_power
+    - sensor.lavavajillas_power
+    - sensor.secadora
+    - sensor.secadora_anual
+    - sensor.secadora_diario
+    - sensor.secadora_mensual
+    - sensor.vitroceramica_anual
+    - sensor.vitroceramica_coste_por_ano
+    - sensor.vitroceramica_coste_por_dia
+    - sensor.vitroceramica_coste_por_mes
+    - sensor.vitroceramica_diario
+    - sensor.vitroceramica_mensual
+    - sensor.vitroceramica_power
+    - switch.lavadora_sonoff_pow_relay
+    - switch.lavavajillas
+    - switch.secadora_switch_0
+
+    # ===== Electrodomésticos (agregados) =====
+    - sensor.consumo_electrodomesticos_no_medibles_2
+    - sensor.consumo_electrodomesticos_no_medibles_por_hora
+    - sensor.consumo_electrodomesticos_no_medibles_suma
+    - sensor.electrodomesticos_power
+    - sensor.electrodomesticos_energy
+
+    # ===== Electrodomésticos (impresora 3D) =====
+    - sensor.bambulab_energy
+    - sensor.bambulab_power
+
+    # ===== Consumo casa =====
+    - sensor.armario_red_power
+    - sensor.armario_red_energy
+    - sensor.consumo_de_la_casa
+    - sensor.consumo_linea_enchufes
+    - sensor.consumo_no_medible
+    - sensor.shellyplug_s_3ce90ee04758_energy
+
+    # ===== Consumo casa (Shelly EM e45b47) =====
+    - sensor.shellyem_e45b47_channel_1_energy
+    - sensor.shellyem_e45b47_channel_1_power
+    - sensor.shellyem_e45b47_channel_2_energy
+    - sensor.shellyem_e45b47_channel_2_power
+
+    # ===== Consumo taller =====
+    - sensor.taller_consumo_taller_energia
+    - sensor.taller_consumo_taller_potencia
+    
+    # ===== Calidad del aire (Salita) =====
+    - sensor.multisensor_salita_co2_medidor_salita
+    - sensor.multisensor_salita_pm2_5_mm_concentracion
+
+    # ===== Temperatura / Humedad ambiente =====
+    - sensor.humedad_media_en_casa
+    - sensor.sbht_003c_414a_humidity
+    - sensor.sbht_003c_414a_temperature
+    - sensor.sbht_003c_c88e_humidity
+    - sensor.sbht_003c_c88e_temperature
+    - sensor.sensor_temperatura_1_humedad_relativa
+    - sensor.sensor_temperatura_1_temperatura
+    - sensor.temperatura_bano_grande_humidity
+    - sensor.temperatura_bano_grande_temperature
+    - sensor.temperatura_bano_humidity
+    - sensor.temperatura_bano_temperature
+    - sensor.temperatura_cocina_1_humidity
+    - sensor.temperatura_cocina_1_temperature
+    - sensor.temperatura_del_agua
+    - sensor.temperatura_media_del_agua_de_la_tortuguera
+    - sensor.temperatura_media_en_casa
+    - sensor.temperatura_patio_humidity
+    - sensor.temperatura_patio_temperature
+    - sensor.temperatura_salita_1_humidity
+    - sensor.temperatura_salita_1_temperature
+
+    # ===== Tiempo exterior =====
+    - sensor.pirateweather_temperature
+    - weather.pirateweather
+    - sensor.pirateweather_precip_intensity
+    - sensor.pirateweather_wind_speed
+    - sensor.pirateweather_wind_gust
+
+    # ===== Duchas =====
+    - input_number.consumo_1o_ducha
+    - input_number.consumo_2o_ducha
+    - input_number.consumo_3o_ducha
+    - input_number.consumo_4o_ducha
+
+    # ===== Personas / Presencia =====
+    - binary_sensor.bthome_sensor_77bc_motion
+    - person.rakel_ruiz_san_martin
+    - person.raquel_san_martin_ibanez
+    - person.rogelio_ruiz_serrano
+
+    # ===== Sistema =====
+    - calendar.espana_an
+    - light.ventilador_salita
+    - media_player.tv_cocina
+    - sensor.mariadb
+
+    # ===== Palmerita =====    
+    - sensor.palmerita_dli
+    - sensor.palmerita_illuminance
+    - sensor.palmerita_conductivity
+    - sensor.palmerita_air_humidity
+    - sensor.palmerita_temperature
+    - sensor.palmerita_soil_moisture
+
+    # ===== V2C Trydan =====
+    - sensor.v2c_trydan_charging_power
+    - sensor.v2c_trydan_charging_energy
+    - sensor.v2c_trydan_charging_time
+
+    - device_tracker.tesla_model_y
+    - sensor.tesla_bateria
+    - binary_sensor.tesla_salud_del_coche
+    - cover.toldos

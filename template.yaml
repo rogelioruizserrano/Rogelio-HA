@@ -1,0 +1,289 @@
+- sensor:
+
+  - name: red
+    unique_id: red_import
+    unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    state: '{% set p = states(''sensor.shellyem_244cab418bca_channel_1_power'') |
+      float(0) %} {{ (p | round(0)) if p > 0 else 0 }}
+
+      '
+    availability: '{{ has_value(''sensor.shellyem_244cab418bca_channel_1_power'')
+      }}
+
+      '
+  - name: excedentes
+    unique_id: red_export
+    unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    state: '{% set p = states(''sensor.gx_device_grid_power_l1'') |
+      float(0) %} {{ ((p * -1) | round(0)) if p < 0 else 0 }}
+
+      '
+    availability: '{{ has_value(''sensor.gx_device_grid_power_l1'')
+      }}
+
+      '
+  - default_entity_id: sensor.tiempo_en_segundos
+    name: Tiempo en segundos
+    state: '{{ states(''sensor.smartshunt_time_to_go'') | int }}'
+  - default_entity_id: sensor.tiempo_en_minutos
+    name: Tiempo en minutos
+    state: '{{ (states(''sensor.smartshunt_time_to_go'') | int / 60) | round(0)
+      }}'
+  - default_entity_id: sensor.tiempo_formateado
+    name: Tiempo formateado
+    state: '{% set seconds = states(''sensor.smartshunt_time_to_go'') | int %}
+      {{ ''%02d:%02d:%02d'' | format(seconds // 3600, (seconds % 3600) // 60, seconds
+      % 60) }}'
+  - unique_id: hora_fin_bateria
+    default_entity_id: sensor.hora_fin_bateria
+    icon: mdi:clock
+    name: Hora de fin de batería
+    availability: >
+      {{ has_value('sensor.gx_device_dc_battery_power')
+      and has_value('sensor.smartshunt_time_to_go')
+      and has_value('sensor.time') }}
+    state: "{%- set battery_power = states('sensor.gx_device_dc_battery_power') | float(default=0)\
+      \ -%}\n{%- if battery_power < -50 -%}\n  {%- set current_time = states('sensor.time')\
+      \ -%}\n  {%- set time_to_zero = (states('sensor.smartshunt_time_to_go')\
+      \ | int(default=0)) / 60 -%}\n  {%- set time_to_twenty = time_to_zero * 0.8\
+      \ -%}\n  {%- set current_hour = current_time.split(':')[0] | int -%}\n  {%-\
+      \ set current_minute = current_time.split(':')[1] | int -%}\n  {%- set total_minutes\
+      \ = current_minute + time_to_twenty -%}\n  {%- set rounded_total = ((total_minutes\
+      \ / 5 | round(0)) * 5) | int -%}\n  {%- set new_hour = current_hour + (rounded_total\
+      \ // 60) -%}\n  {%- set final_minute = rounded_total % 60 | int -%}\n  {%- set\
+      \ final_hour = new_hour % 24 | int -%}\n  {%- set days_ahead = (new_hour //\
+      \ 24) | int -%}\n  {%- set target_day = (now() + timedelta(days=days_ahead))\
+      \ -%}\n  {%- set day_en = target_day.strftime('%a') -%}\n  {%- set dias = {'Mon':\
+      \ 'Lunes', 'Tue': 'Martes', 'Wed': 'Miércoles', 'Thu': 'Jueves', 'Fri': 'Viernes',\
+      \ 'Sat': 'Sábado', 'Sun': 'Domingo'} -%}\n  {%- set dia = dias[day_en] if day_en\
+      \ in dias else day_en -%}\n  {{ dia }} {{ target_day.strftime('%d/%m') }} {{\
+      \ '%02d' % final_hour }}:{{ '%02d' % final_minute }}\n{%- else -%}\n  0\n{%-\
+      \ endif %}"
+  - unit_of_measurement: °C
+    device_class: temperature
+    state_class: measurement
+    default_entity_id: sensor.sensacion_termica
+    name: Sensación Térmica
+    availability: >
+      {{ has_value('sensor.temperatura_media_en_casa')
+         and has_value('sensor.humedad_media_en_casa') }}
+    state: "{% set T = (states('sensor.temperatura_media_en_casa') | float * 9 / 5)\
+      \ + 32 %} {% set RH = states('sensor.humedad_media_en_casa') | float %}\n{%\
+      \ set simple_HI = 0.5 * (T + 61.0 + ((T-68.0)*1.2) + (RH*0.094)) %}\n{% if simple_HI\
+      \ >= 80.0 %}\n  {% set HI = -42.379 + 2.04901523*T + 10.14333127*RH - 0.22475541*T*RH\
+      \ - 0.00683783*T*T - 0.05481717*RH*RH + 0.00122874*T*T*RH + 0.00085282*T*RH*RH\
+      \ - 0.00000199*T*T*RH*RH %}\n  \n  {% if RH < 13.0 and T >= 80.0 and T <= 112.0\
+      \ %}\n    {% set HI = HI - ((13.0 - RH) / 4.0) * ((17.0 - (T - 95.0) | abs)\
+      \ / 17.0) | sqrt %}\n  {% elif RH > 85.0 and T >= 80.0 and T <= 87.0 %}\n  \
+      \  {% set HI = HI + ((RH - 85.0) / 10.0) * ((87.0 - T) / 5.0) %}\n  {% endif\
+      \ %}\n{% else %}\n  {% set HI = simple_HI %}\n{% endif %} {{ ((HI - 32) * 5\
+      \ / 9) | round(1) }}"
+  - unit_of_measurement: °C
+    device_class: temperature
+    state_class: measurement
+    default_entity_id: sensor.confort_termico
+    name: Confort Térmico
+    availability: >
+      {{ has_value('sensor.temperatura_media_en_casa')
+      and has_value('sensor.humedad_media_en_casa') }}
+    state: '{% set tempInC = states(''sensor.temperatura_media_en_casa'') | float
+      %} {% set humValue = states(''sensor.humedad_media_en_casa'') | float %} {%
+      set confort = tempInC - (0.55 * (1 - 0.01 * humValue) * (tempInC - 14.5)) %}
+      {{ confort | round(2) }}'
+
+  - unit_of_measurement: €
+    default_entity_id: sensor.gasto_casa_hora
+    name: Gasto de la casa por hora en €
+    state: '{%set IVA = 1.05 | float(0) %} {%set imp_elec = 1.005 | float(0) %} {{
+      (( states(''sensor.red_hora'') | float(0) * (states(''sensor.precio_electricidad_tramos'')
+      | float(0)) ) * imp_elec * IVA )  | round(3) }}'
+  - unit_of_measurement: €
+    default_entity_id: sensor.excedentes_casa_hora_eur
+    name: Excedentes de la casa por hora en €
+    state: '{%set IVA = 1.05 | float(0) %} {%set imp_elec = 1.005 | float(0) %} {{
+      (( states(''sensor.excedentes_hora'') | float(0) * (states(''sensor.precio_electricidad_tramos_excedentes'')
+      | float(0)) ) * imp_elec * IVA )  | round(3) }}'
+  - unit_of_measurement: €
+    default_entity_id: sensor.ahorro_casa_coste_hora
+    name: Ahorro de la casa por hora en €
+    state: '{%set IVA = 1.05 | float(0) %} {%set imp_elec = 1.005 | float(0) %} {{
+      (( states(''sensor.ahorro_casa_por_hora'') | float(0) * (states(''sensor.precio_electricidad_tramos'')
+      | float(0)) ) * imp_elec * IVA )  | round(3) }}'
+  - unit_of_measurement: €
+    default_entity_id: sensor.octopus_energy_valle_euros
+    name: Octopus Energy valle en euros
+    state: '{{ (( states(''sensor.octopus_energy_contador_valle'')|float(0)) * 0.12342)  |
+      round(2) }}'
+  - unit_of_measurement: €
+    default_entity_id: sensor.octopus_energy_llano_euros
+    name: Octopus Energy llano en euros
+    state: '{{ (( states(''sensor.octopus_energy_contador_llano'')|float(0)) * 0.1694)  |
+      round(2) }}'
+  - unit_of_measurement: €
+    default_entity_id: sensor.octopus_energy_punta_euros
+    name: Octopus Energy punta en euros
+    state: '{{(( states(''sensor.octopus_energy_contador_punta'')|float(0)) * 0.26015)  |
+      round(2) }}'
+  - unit_of_measurement: €
+    default_entity_id: sensor.precio_electricidad_tramos
+    name: Precio electricidad por tramos
+    state: "{% if is_state('select.octopus_energy_contador', 'Valle') %}\n  {{ 0.12342\
+      \ }}\n{% elif is_state('select.octopus_energy_contador', 'Llano') %}\n  {{ 0.1694\
+      \ }}\n{% else %}\n  {{ 0.26015 }}\n{% endif %}"
+  - unit_of_measurement: €
+    default_entity_id: sensor.precio_electricidad_tramos_excedentes
+    name: Precio electricidad por tramos excedentes
+    state: '0.05'
+  - unit_of_measurement: €
+    default_entity_id: sensor.excedentes_mes_eur
+    name: Precio de los excedentes en € al mes
+    state: '{{ (( states(''sensor.excedentes_mensual'')|float(0)) * (states(''sensor.precio_electricidad_tramos_excedentes'')|float(0)))  |
+      round(2) }}'
+  - unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    default_entity_id: sensor.bateria_carga
+    state: "{% set valor = states('sensor.gx_device_dc_battery_power') | float(0) %} {%\
+      \ if valor > 0 %}\n  {{ valor }}\n{% else %}\n  0\n{% endif %}"
+    name: bateria_carga
+  - unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    default_entity_id: sensor.bateria_carga_mas_mppt
+    state: '{{ states(''sensor.bateria_carga'')|float(default=0) + ((states(''sensor.gx_device_dc_battery_power'')|float(default=0)))|round(0,
+      default=0.00)  }}'
+    name: bateria_carga_mas_mppt
+    device_class: power
+  - unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    default_entity_id: sensor.bateria_descarga
+    state: "{% set valor = states('sensor.gx_device_dc_battery_power') | float(0) %} {%\
+      \ if valor < 0 %}\n  {{ (valor * -1) }}\n{% else %}\n  0\n{% endif %}"
+    name: bateria_descarga
+  - unit_of_measurement: '%'
+    device_class: battery
+    state_class: measurement
+    unique_id: bateria_soc
+    default_entity_id: sensor.bateria_soc
+    state: '{{states(''sensor.gx_device_dc_battery_charge'')|float(0)}}'
+    name: bateria_soc
+  - unit_of_measurement: kWh
+    device_class: energy
+    state_class: measurement
+    default_entity_id: sensor.consumo_no_fosil
+    name: Consumo no fosil
+  
+    availability: >
+      {{ has_value('sensor.red_diario')
+         and has_value('sensor.grid_fossil_fuel_percentage') }}
+  
+    state: >
+      {% set red = states('sensor.red_diario') | float(0) %}
+      {% set fosil = states('sensor.grid_fossil_fuel_percentage') | float(0) %}
+      {{ (red - ((red / 100) * fosil)) | round(0) }}
+  - unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    default_entity_id: sensor.string_sureste
+    name: String sureste
+    availability: >
+      {{ has_value('sensor.sb5_0_1av_41_936_pv_power_a') }}
+    state: '{{states(''sensor.sb5_0_1av_41_936_pv_power_a'')|round(1, default=0) }}'
+  - unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    default_entity_id: sensor.string_suroeste
+    name: String suroeste
+    availability: >
+      {{ has_value('sensor.sb5_0_1av_41_936_pv_power_b') }}
+    state: '{{states(''sensor.sb5_0_1av_41_936_pv_power_b'')|round(1, default=0) }}'
+  - unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    default_entity_id: sensor.consumo_termos
+    name: Consumo termos electricos
+    state: '{{ (states(''sensor.termo_50l_switch_0_power'')|float(default=0) + states(''sensor.switch_termo_100l_00_00_00_cuartillo_azotea_interior_power'')|float(default=0))|round(0,
+      default=0.0)  }}'
+  - unit_of_measurement: kWh
+    device_class: energy
+    state_class: measurement
+    default_entity_id: sensor.energia_termos
+    name: Energia termos electricos
+    state: '{{ (states(''sensor.termo_50l_switch_0_energy'')|float(default=0) + states(''sensor.shelly1pm_68c63afb367a_energy'')|float(default=0))|round(0,
+      default=0.0)  }}'
+  - unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    default_entity_id: sensor.consumo_de_la_casa
+    name: Consumo de la casa
+    state: '{{ (states(''sensor.gx_device_consumption_power_l1'')|float(default=0))|round(0,
+      default=0.0)  }}'
+  - unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    default_entity_id: sensor.consumo_solar
+    name: Consumo solar
+    state: '{{ (states(''sensor.gx_device_pv_on_output_power_l1'')|float(default=0) - states(''sensor.bateria_descarga'')|float(default=0))|round(2,
+      default=0.0)  }}'
+  - unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    default_entity_id: sensor.consumo_linea_enchufes
+    name: Consumo linea enchufes
+    state: '{{ (states(''sensor.shellyem_e45b47_channel_1_power'')|float(default=0)
+      - states(''sensor.armario_red_power'')|float(default=0) - states(''sensor.radiador_cocina_power'')|float(default=0)
+      - states(''sensor.radiador_salita_power'')|float(default=0))|round(2, default=0.0)  }}'
+  - unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    default_entity_id: sensor.consumo_medible
+    name: Consumo de la casa medible
+    state: '{{ ((states(''sensor.bano_interior_sensor_power'')|float(default=0)) +
+      (states(''sensor.radiador_cocina_power'')|float(default=0)) + (states(''sensor.radiador_salita_power'')|float(default=0))
+      + (states(''sensor.sensor.enchufe_artillery_x1_power'')|float(default=0)) +
+      (states(''sensor.sensor.enchufe_ender_3_power'')|float(default=0)) + (states(''sensor.sensor.enchufe_blv_power'')|float(default=0))
+      + (states(''sensor.luces_escalera_power'')|float(default=0)) + (states(''sensor.rele_doble_escalera_bajo_power'')|float(default=0))
+      + (states(''sensor.termo_50l_switch_0_power'')|float(default=0)) + (states(''sensor.switch_termo_100l_00_00_00_cuartillo_azotea_interior_power'')|float(default=0))
+      + (states(''sensor.consumo_electrodomesticos_no_medibles'')|float(default=0))
+      + (states(''sensor.armario_red_power'')|float(default=0)) + (states(''sensor.shellyem_e45b47_channel_1_power'')|float(default=0))
+      + (states(''sensor.shellyem_e45b47_channel_2_power'')|float(default=0)) + (states(''sensor.vitroceramica_power'')|float(default=0))
+      + (states(''sensor.secadora_switch_0_power'')|float(default=0)) + (states(''sensor.consumo_horno_micro_cafetera_pzem_004t_v3_power'')|float(default=0))
+      + (states(''sensor.lavavajillas_power'')|float(default=0)) + (states(''sensor.lavadora_sonoff_pow_power'')|float(default=0))
+      + (states(''sensor.aire_acondicionado_power'')|float(default=0)) + (states(''sensor.consumo_taller_consumo_taller_power'')|float(default=0)))|round(2,
+      default=0.0) }}'
+
+  - unit_of_measurement: W
+    device_class: power
+    state_class: measurement
+    default_entity_id: sensor.consumo_no_medible
+    name: Consumo de la casa no medible
+    state: '{{ (states(''sensor.shellyem_244cab418bca_channel_2_power'')|float(default=0)
+      - states(''sensor.consumo_medible'')|float(default=0))|round(2, default=0.0)
+      }}'
+
+  - default_entity_id: sensor.ratio_consumo_excedentes
+    name: Ratio consumo red/excedentes
+    availability: >
+      {{ states('sensor.red_mensual') not in ['unknown', 'unavailable']
+         and states('sensor.excedentes_mensual') not in ['unknown', 'unavailable'] }}
+    state: >
+      {% set red = states('sensor.red_mensual') | float(0) %}
+      {% set exc = states('sensor.excedentes_mensual') | float(0) %}
+      {{ (exc / red) | round(2) if red > 0 else 0 }}
+
+  - default_entity_id: sensor.pirateweather_traducido
+    name: pirateweather traducido
+    state: "{% set estado_ingles = states('weather.pirateweather') %} {% set traducciones\
+      \ = {\n  'sunny': 'soleado',\n  'cloudy': 'nublado',\n  'fog': 'nublado',\n\
+      \  'partlycloudy': 'parcialmente nublado',\n  'lightning': 'con relampagos',\n\
+      \  'rainy': 'lluvioso',\n  'clear-night': 'noche despejada',\n  'lightning-rainy':\
+      \ 'con tormenta electrica',\n  'pouring': 'lluvia torrencial',\n  'hail': 'con\
+      \ granizo',\n  'windy': 'ventoso',\n  'windy-variant': 'ventoso variable',\n\
+      \  'exceptional': 'excepcional',\n} %} {{ traducciones.get(estado_ingles, estado_ingles)\
+      \ }}"
+

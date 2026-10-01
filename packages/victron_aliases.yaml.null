@@ -1,0 +1,521 @@
+# =============================================================================
+# Package: victron_aliases.yaml
+# -----------------------------------------------------------------------------
+# Capa de abstracción sobre las entidades de la integración Victron.
+# Usa SIEMPRE los entity_id de este fichero en automatizaciones, scripts,
+# dashboards, recorder, etc. Si un día cambias hardware o las entidades de
+# abajo mutan (p.ej. añaden _2), solo tocas este archivo.
+#
+# Activos: ~15 alias principales. El resto está comentado para activar bajo
+# demanda. Descomenta el bloque entero (name + unique_id + state + ...) y
+# recarga "Template entities" o reinicia HA.
+#
+# Convención de naming:
+#   number.ess_*                →  parámetros ESS escribibles
+#   select.ess_*                →  estados ESS escribibles
+# =============================================================================
+
+template:
+
+  # ===========================================================================
+  # SENSORES (solo lectura)
+  # ===========================================================================
+  - sensor:
+
+      # -----------------------------------------------------------------------
+      # BATERÍA (Basen)
+      # -----------------------------------------------------------------------
+
+      - name: "Batería SoC"
+        unique_id: bateria_soc
+        unit_of_measurement: "%"
+        device_class: battery
+        state_class: measurement
+        state: "{{ states('sensor.bateria_basen_charge') }}"
+        availability: "{{ has_value('sensor.bateria_basen_charge') }}"
+
+      - name: "Batería Potencia"
+        unique_id: bateria_potencia
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        # Convención: positivo = cargando, negativo = descargando
+        state: "{{ states('sensor.bateria_basen_power') }}"
+        availability: "{{ has_value('sensor.bateria_basen_power') }}"
+
+      - name: "Batería Tensión"
+        unique_id: bateria_tension
+        unit_of_measurement: "V"
+        device_class: voltage
+        state_class: measurement
+        state: "{{ states('sensor.bateria_basen_dc_bus_voltage') }}"
+        availability: "{{ has_value('sensor.bateria_basen_dc_bus_voltage') }}"
+
+      - name: "Batería Temperatura"
+        unique_id: bateria_temperatura
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        state: "{{ states('sensor.bateria_basen_temperatura') }}"
+        availability: "{{ has_value('sensor.bateria_basen_temperatura') }}"
+
+      - name: "Batería SoH"
+        unique_id: bateria_soh
+        unit_of_measurement: "%"
+        state_class: measurement
+        state: "{{ states('sensor.bateria_basen_state_of_health') }}"
+        availability: "{{ has_value('sensor.bateria_basen_state_of_health') }}"
+
+      # -----------------------------------------------------------------------
+      # SOLAR
+      # -----------------------------------------------------------------------
+
+      - name: "Solar Potencia Total"
+        unique_id: solar_potencia_total
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        # Suma MPPT (DC) + Sunnyboy (AC). Recuerda: medidos en puntos
+        # distintos (DC vs AC), de ahí el ~7,5% de discrepancia sistemática.
+        state: >
+          {{ (states('sensor.gx_device_pv_power')|float(0) + states('sensor.sma_sunnyboy_5_power_total')|float(0)) | round(0) }}
+        availability: >
+          {{ has_value('sensor.gx_device_pv_power') and has_value('sensor.sma_sunnyboy_5_power_total') }}
+
+      - name: "Solar MPPT Potencia"
+        unique_id: solar_mppt_potencia
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: "{{ states('sensor.gx_device_pv_power') }}"
+        availability: "{{ has_value('sensor.gx_device_pv_power') }}"
+
+      - name: "Solar Sunnyboy Potencia"
+        unique_id: solar_sunnyboy_potencia
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: "{{ states('sensor.sma_sunnyboy_5_power_total') }}"
+        availability: "{{ has_value('sensor.sma_sunnyboy_5_power_total') }}"
+
+      - name: "Solar Generación Hoy"
+        unique_id: solar_generacion_hoy
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: total_increasing
+        state: "{{ states('sensor.generacion_solar_diaria') }}"
+        availability: "{{ has_value('sensor.generacion_solar_diaria') }}"
+
+      # -----------------------------------------------------------------------
+      # RED ELÉCTRICA Y CONSUMO
+      # -----------------------------------------------------------------------
+
+      - name: "Red Potencia"
+        unique_id: red_potencia
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        # Positivo = consumiendo de red, negativo = inyectando
+        state: "{{ states('sensor.gx_device_grid_power_l1') }}"
+        availability: "{{ has_value('sensor.gx_device_grid_power_l1') }}"
+
+      - name: "Consumo Casa"
+        unique_id: consumo_casa
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: "{{ states('sensor.gx_device_consumption_power_l1') }}"
+        availability: "{{ has_value('sensor.gx_device_consumption_power_l1') }}"
+
+      # -----------------------------------------------------------------------
+      # INVERSOR / SISTEMA
+      # -----------------------------------------------------------------------
+
+      - name: "Inversor Potencia Salida"
+        unique_id: inversor_potencia_salida
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: "{{ states('sensor.multiplus_ii_48_5000_70_50_id_276_output_power_l1') }}"
+        availability: "{{ has_value('sensor.multiplus_ii_48_5000_70_50_id_276_output_power_l1') }}"
+
+      - name: "Sistema Estado"
+        unique_id: sistema_estado
+        state: "{{ states('sensor.gx_device_system_state') }}"
+        availability: "{{ has_value('sensor.gx_device_system_state') }}"
+
+
+      # =====================================================================
+      # ====== SENSORES ADICIONALES (comentados, descomentar a demanda) =====
+      # =====================================================================
+
+      # # --- Batería avanzado ---
+      # - name: "Batería Corriente"
+      #   unique_id: bateria_corriente
+      #   unit_of_measurement: "A"
+      #   device_class: current
+      #   state_class: measurement
+      #   state: "{{ states('sensor.bateria_basen_dc_bus_current') }}"
+      #   availability: "{{ has_value('sensor.bateria_basen_dc_bus_current') }}"
+
+      # - name: "Batería Capacidad Instalada"
+      #   unique_id: bateria_capacidad_instalada
+      #   unit_of_measurement: "Ah"
+      #   state: "{{ states('sensor.bateria_basen_installed_capacity') }}"
+
+      # - name: "Batería Energía Cargada"
+      #   unique_id: bateria_energia_cargada
+      #   unit_of_measurement: "kWh"
+      #   device_class: energy
+      #   state_class: total_increasing
+      #   state: "{{ states('sensor.bateria_basen_charged_energy') }}"
+
+      # - name: "Batería Energía Descargada"
+      #   unique_id: bateria_energia_descargada
+      #   unit_of_measurement: "kWh"
+      #   device_class: energy
+      #   state_class: total_increasing
+      #   state: "{{ states('sensor.bateria_basen_discharged_energy') }}"
+
+      # - name: "Batería Celda Tensión Máx"
+      #   unique_id: bateria_celda_tension_max
+      #   unit_of_measurement: "V"
+      #   device_class: voltage
+      #   state_class: measurement
+      #   state: "{{ states('sensor.bateria_basen_maximum_cell_voltage') }}"
+
+      # - name: "Batería Celda Tensión Mín"
+      #   unique_id: bateria_celda_tension_min
+      #   unit_of_measurement: "V"
+      #   device_class: voltage
+      #   state_class: measurement
+      #   state: "{{ states('sensor.bateria_basen_minimum_cell_voltage') }}"
+
+      # - name: "Batería Celda Temp Máx"
+      #   unique_id: bateria_celda_temp_max
+      #   unit_of_measurement: "°C"
+      #   device_class: temperature
+      #   state_class: measurement
+      #   state: "{{ states('sensor.bateria_basen_maximum_cell_temperature') }}"
+
+      # - name: "Batería Celda Temp Mín"
+      #   unique_id: bateria_celda_temp_min
+      #   unit_of_measurement: "°C"
+      #   device_class: temperature
+      #   state_class: measurement
+      #   state: "{{ states('sensor.bateria_basen_minimum_cell_temperature') }}"
+
+      # - name: "Batería Desequilibrio Celdas"
+      #   unique_id: bateria_cell_imbalance
+      #   state: "{{ states('sensor.bateria_basen_cell_imbalance') }}"
+
+      # - name: "Batería Corriente Carga Máx Permitida"
+      #   unique_id: bateria_max_charge_current_allowed
+      #   unit_of_measurement: "A"
+      #   device_class: current
+      #   state_class: measurement
+      #   state: "{{ states('sensor.bateria_basen_maximum_allowed_charge_current') }}"
+
+      # - name: "Batería Corriente Descarga Máx Permitida"
+      #   unique_id: bateria_max_discharge_current_allowed
+      #   unit_of_measurement: "A"
+      #   device_class: current
+      #   state_class: measurement
+      #   state: "{{ states('sensor.bateria_basen_maximum_allowed_discharge_current') }}"
+
+      # - name: "Batería Tiempo Restante"
+      #   unique_id: bateria_time_to_go
+      #   # Smartshunt — útil para "cuánto tiempo aguanta a este ritmo"
+      #   state: "{{ states('sensor.smartshunt_time_to_go') }}"
+
+      # # --- Solar detalle ---
+      # - name: "Solar Corriente DC"
+      #   unique_id: solar_corriente_dc
+      #   unit_of_measurement: "A"
+      #   device_class: current
+      #   state_class: measurement
+      #   state: "{{ states('sensor.gx_device_pv_current') }}"
+
+      # - name: "Solar MPPT Rendimiento Hoy"
+      #   unique_id: solar_mppt_rendimiento_hoy
+      #   unit_of_measurement: "kWh"
+      #   device_class: energy
+      #   state_class: total_increasing
+      #   state: "{{ states('sensor.smartsolar_charger_mppt_150_35_id_278_rendimiento_hoy') }}"
+
+      # - name: "Solar MPPT Rendimiento Ayer"
+      #   unique_id: solar_mppt_rendimiento_ayer
+      #   unit_of_measurement: "kWh"
+      #   device_class: energy
+      #   state: "{{ states('sensor.smartsolar_charger_mppt_150_35_id_278_rendimiento_ayer') }}"
+
+      # - name: "Solar MPPT Tensión Bus"
+      #   unique_id: solar_mppt_tension_bus
+      #   unit_of_measurement: "V"
+      #   device_class: voltage
+      #   state_class: measurement
+      #   state: "{{ states('sensor.smartsolar_charger_mppt_150_35_id_278_tension_del_bus_fv') }}"
+
+      # - name: "Solar MPPT Estado"
+      #   unique_id: solar_mppt_estado
+      #   state: "{{ states('sensor.smartsolar_charger_mppt_150_35_id_278_state') }}"
+
+      # - name: "Solar MPPT Pico Hoy"
+      #   unique_id: solar_mppt_pico_hoy
+      #   unit_of_measurement: "W"
+      #   device_class: power
+      #   state: "{{ states('sensor.smartsolar_charger_mppt_150_35_id_278_max_power_today') }}"
+
+      # - name: "Solar Sunnyboy Tensión L1"
+      #   unique_id: solar_sunnyboy_tension_l1
+      #   unit_of_measurement: "V"
+      #   device_class: voltage
+      #   state_class: measurement
+      #   state: "{{ states('sensor.sma_sunnyboy_5_voltage_l1') }}"
+
+      # - name: "Solar Sunnyboy Corriente L1"
+      #   unique_id: solar_sunnyboy_corriente_l1
+      #   unit_of_measurement: "A"
+      #   device_class: current
+      #   state_class: measurement
+      #   state: "{{ states('sensor.sma_sunnyboy_5_corriente_l1') }}"
+
+      # - name: "Solar Sunnyboy Rendimiento Total"
+      #   unique_id: solar_sunnyboy_rendimiento_total
+      #   unit_of_measurement: "kWh"
+      #   device_class: energy
+      #   state_class: total_increasing
+      #   state: "{{ states('sensor.sma_sunnyboy_5_rendimiento_total') }}"
+
+      # - name: "Solar Generación Mes"
+      #   unique_id: solar_generacion_mes
+      #   unit_of_measurement: "kWh"
+      #   device_class: energy
+      #   state: "{{ states('sensor.generacion_solar_mensual') }}"
+
+      # - name: "Solar Generación Año"
+      #   unique_id: solar_generacion_ano
+      #   unit_of_measurement: "kWh"
+      #   device_class: energy
+      #   state: "{{ states('sensor.generacion_solar_anual') }}"
+
+      # # --- Red ---
+      # - name: "Red Corriente"
+      #   unique_id: red_corriente
+      #   unit_of_measurement: "A"
+      #   device_class: current
+      #   state_class: measurement
+      #   state: "{{ states('sensor.gx_device_grid_current_l1') }}"
+
+      # # --- Inversor / Multiplus ---
+      # - name: "Inversor Tensión Salida"
+      #   unique_id: inversor_tension_salida
+      #   unit_of_measurement: "V"
+      #   device_class: voltage
+      #   state_class: measurement
+      #   state: "{{ states('sensor.multiplus_ii_48_5000_70_50_id_276_output_voltage_l1') }}"
+
+      # - name: "Inversor Corriente Salida"
+      #   unique_id: inversor_corriente_salida
+      #   unit_of_measurement: "A"
+      #   device_class: current
+      #   state_class: measurement
+      #   state: "{{ states('sensor.multiplus_ii_48_5000_70_50_id_276_output_current_l1') }}"
+
+      # - name: "Inversor Tensión Entrada"
+      #   unique_id: inversor_tension_entrada
+      #   unit_of_measurement: "V"
+      #   device_class: voltage
+      #   state_class: measurement
+      #   state: "{{ states('sensor.multiplus_ii_48_5000_70_50_id_276_tension_de_entrada_l1') }}"
+
+      # - name: "Inversor Corriente Entrada"
+      #   unique_id: inversor_corriente_entrada
+      #   unit_of_measurement: "A"
+      #   device_class: current
+      #   state_class: measurement
+      #   state: "{{ states('sensor.multiplus_ii_48_5000_70_50_id_276_corriente_de_entrada_l1') }}"
+
+      # - name: "Inversor Frecuencia Salida"
+      #   unique_id: inversor_frecuencia_salida
+      #   unit_of_measurement: "Hz"
+      #   state_class: measurement
+      #   state: "{{ states('sensor.multiplus_ii_48_5000_70_50_id_276_frecuencia_de_salida_l1') }}"
+
+      # - name: "Inversor Estado"
+      #   unique_id: inversor_estado
+      #   state: "{{ states('sensor.multiplus_ii_48_5000_70_50_id_276_estado') }}"
+
+      # - name: "Inversor Entrada AC Activa"
+      #   unique_id: inversor_active_ac_input
+      #   state: "{{ states('sensor.multiplus_ii_48_5000_70_50_id_276_active_ac_input') }}"
+
+      # # --- Sistema GX ---
+      # - name: "Sistema Fuente Entrada AC"
+      #   unique_id: sistema_fuente_ac
+      #   state: "{{ states('sensor.gx_device_ac_active_input_source') }}"
+
+      # - name: "Sistema SoC Activo Límite"
+      #   unique_id: sistema_active_soc_limit
+      #   unit_of_measurement: "%"
+      #   state_class: measurement
+      #   state: "{{ states('sensor.gx_device_active_soc_limit') }}"
+
+
+  # ===========================================================================
+  # NUMBERS (parámetros ESS — escritura)
+  # ===========================================================================
+  - number:
+
+      - name: "ESS Max Charge Current"
+        unique_id: ess_max_charge_current
+        unit_of_measurement: "A"
+        min: 0
+        max: 100
+        step: 1
+        state: "{{ states('number.gx_device_ess_max_charge_current') }}"
+        availability: "{{ has_value('number.gx_device_ess_max_charge_current') }}"
+        set_value:
+          - service: number.set_value
+            target:
+              entity_id: number.gx_device_ess_max_charge_current
+            data:
+              value: "{{ value }}"
+
+      - name: "ESS Min SoC Limit"
+        unique_id: ess_min_soc_limit
+        unit_of_measurement: "%"
+        min: 0
+        max: 100
+        step: 1
+        state: "{{ states('number.gx_device_ess_min_soc_limit') }}"
+        availability: "{{ has_value('number.gx_device_ess_min_soc_limit') }}"
+        set_value:
+          - service: number.set_value
+            target:
+              entity_id: number.gx_device_ess_min_soc_limit
+            data:
+              value: "{{ value }}"
+
+      # # --- ESS Numbers adicionales ---
+      # - name: "ESS Max Charge Power"
+      #   unique_id: ess_max_charge_power
+      #   unit_of_measurement: "W"
+      #   min: 0
+      #   max: 10000
+      #   step: 100
+      #   state: "{{ states('number.gx_device_ess_max_charge_power_limit') }}"
+      #   set_value:
+      #     - service: number.set_value
+      #       target:
+      #         entity_id: number.gx_device_ess_max_charge_power_limit
+      #       data:
+      #         value: "{{ value }}"
+
+      # - name: "ESS Max Feed-In Power"
+      #   unique_id: ess_max_feed_in_power
+      #   unit_of_measurement: "W"
+      #   min: 0
+      #   max: 10000
+      #   step: 100
+      #   state: "{{ states('number.gx_device_ess_max_feed_in_power') }}"
+      #   set_value:
+      #     - service: number.set_value
+      #       target:
+      #         entity_id: number.gx_device_ess_max_feed_in_power
+      #       data:
+      #         value: "{{ value }}"
+
+      # - name: "ESS Max Inverter Power"
+      #   unique_id: ess_max_inverter_power
+      #   unit_of_measurement: "W"
+      #   min: 0
+      #   max: 10000
+      #   step: 100
+      #   state: "{{ states('number.gx_device_ess_max_inverter_power_limit') }}"
+      #   set_value:
+      #     - service: number.set_value
+      #       target:
+      #         entity_id: number.gx_device_ess_max_inverter_power_limit
+      #       data:
+      #         value: "{{ value }}"
+
+      # - name: "AC Input Limit"
+      #   unique_id: ac_input_limit
+      #   unit_of_measurement: "A"
+      #   min: 0
+      #   max: 50
+      #   step: 0.1
+      #   state: "{{ states('number.gx_device_ac_input_limit') }}"
+      #   set_value:
+      #     - service: number.set_value
+      #       target:
+      #         entity_id: number.gx_device_ac_input_limit
+      #       data:
+      #         value: "{{ value }}"
+
+
+  # ===========================================================================
+  # SELECTS (estados ESS — escritura)
+  # ===========================================================================
+  - select:
+
+      - name: "ESS BatteryLife State"
+        unique_id: ess_batterylife_state
+        # Replica las opciones tal cual las expone la entidad Victron
+        options: >
+          {{ state_attr('select.gx_device_ess_batterylife_state', 'options') | default([], true) }}
+        state: "{{ states('select.gx_device_ess_batterylife_state') }}"
+        availability: "{{ has_value('select.gx_device_ess_batterylife_state') }}"
+        select_option:
+          - service: select.select_option
+            target:
+              entity_id: select.gx_device_ess_batterylife_state
+            data:
+              option: "{{ option }}"
+
+      # # --- Selects adicionales ---
+      # - name: "ESS Mode Hub4"
+      #   unique_id: ess_mode_hub4
+      #   options: >
+      #     {{ state_attr('select.gx_device_ess_mode_hub4', 'options') | default([], true) }}
+      #   state: "{{ states('select.gx_device_ess_mode_hub4') }}"
+      #   select_option:
+      #     - service: select.select_option
+      #       target:
+      #         entity_id: select.gx_device_ess_mode_hub4
+      #       data:
+      #         option: "{{ option }}"
+
+      # - name: "DESS Mode"
+      #   unique_id: dess_mode
+      #   options: >
+      #     {{ state_attr('select.gx_device_dess_mode', 'options') | default([], true) }}
+      #   state: "{{ states('select.gx_device_dess_mode') }}"
+      #   select_option:
+      #     - service: select.select_option
+      #       target:
+      #         entity_id: select.gx_device_dess_mode
+      #       data:
+      #         option: "{{ option }}"
+
+
+# =============================================================================
+# Notas de migración:
+# - Tras añadir este package, NO uses los entity_id originales en sitios
+#   nuevos. Para los antiguos, ve migrando gradualmente.
+# - Si quieres dejar el recorder solo con los alias y excluir originales:
+#     recorder:
+#       exclude:
+#         entity_globs:
+#           - sensor.gx_device_*
+#           - sensor.bateria_basen_*
+#           - sensor.multiplus_ii_*
+#           - sensor.smartsolar_charger_*
+#           - sensor.smartshunt_*
+#           - sensor.sma_sunnyboy_*
+#   Pero ojo: perderás histórico de los que no hayas aliased. Recomendable
+#   migrar primero todo lo crítico y dejar las exclusiones para más adelante.
+# - Lovelace en modo UI: edita el dashboard como YAML (⋮ → "Editor de control
+#   raw") y haz buscar/reemplazar.
+# =============================================================================

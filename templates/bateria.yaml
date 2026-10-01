@@ -1,0 +1,19 @@
+- sensor:
+  - unit_of_measurement: W
+    device_class: power
+    default_entity_id: sensor.bateria_carga
+    state: "{% set valor = states('sensor.system_battery_power') | float(0) %} {%
+      if valor > 0 %}\n  {{ valor }}\n{% else %}\n  0\n{% endif %}"
+    name: bateria_carga
+  - unit_of_measurement: W
+    device_class: power
+    default_entity_id: sensor.bateria_descarga
+    state: "{% set valor = states('sensor.system_battery_power') | float(0) %} {%
+      if valor < 0 %}\n  {{ (valor * -1) }}\n{% else %}\n  0\n{% endif %}"
+    name: bateria_descarga
+  - unit_of_measurement: '%'
+    device_class: battery
+    unique_id: bateria_soc
+    default_entity_id: sensor.bateria_soc
+    state: '{{states(''sensor.system_battery_soc'')|float(0)}}'
+    name: bateria_soc

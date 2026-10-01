@@ -1,0 +1,78 @@
+- sensor:
+  - unit_of_measurement: Kwh
+    default_entity_id: sensor.consumo_no_fosil
+    name: Consumo no fosil
+    state: '{{ states(''sensor.red_diario'')|float(default=0) - ((states(''sensor.red_diario'')|float(default=0)/100)
+      * states(''sensor.grid_fossil_fuel_percentage'')|float(default=0))|round(0,
+      default=0.00)  }}'
+  - unit_of_measurement: W
+    default_entity_id: sensor.generacion_solar_unknown
+    name: Generación solar
+    state: '{{((states(''sensor.victron_pvinverter_l1_power_20'')|float(default=0))
+      + (states(''sensor.system_dc_pv_power'')|float(default=0)))|round(2, default=0.0)}}'
+  - unit_of_measurement: W
+    default_entity_id: sensor.string_sureste
+    name: String sureste
+    state: '{{states(''sensor.sb5_0_1av_41_936_pv_power_a'')|round(1, default=0) }}'
+  - unit_of_measurement: W
+    default_entity_id: sensor.string_suroeste
+    name: String suroeste
+    state: '{{states(''sensor.sb5_0_1av_41_936_pv_power_b'')|round(1, default=0) }}'
+  - unit_of_measurement: W
+    default_entity_id: sensor.consumo_termos
+    name: Consumo termos electricos
+    state: '{{ (states(''sensor.termo_50l_switch_0_power'')|float(default=0) + states(''sensor.switch_termo_100l_00_00_00_cuartillo_azotea_interior_power'')|float(default=0))|round(0,
+      default=0.0)  }}'
+  - unit_of_measurement: W
+    default_entity_id: sensor.consumo_de_la_casa
+    name: Consumo de la casa
+    state: '{{ (states(''sensor.shellyem_244cab418bca_channel_2_power'')|float(default=0))|round(0,
+      default=0.0)  }}'
+  - unit_of_measurement: W
+    default_entity_id: sensor.consumo_solar
+    name: Consumo solar
+    state: '{{ (states(''sensor.generacion_solar_unknown'')|float(default=0) - states(''sensor.bateria_descarga'')|float(default=0))|round(2,
+      default=0.0)  }}'
+  - unit_of_measurement: W
+    default_entity_id: sensor.consumo_linea_enchufes
+    name: Consumo linea enchufes
+    state: '{{ (states(''sensor.shellyem_e45b47_channel_1_power'')|float(default=0)
+      - states(''sensor.armario_red_power'')|float(default=0) - states(''sensor.radiador_cocina_power'')|float(default=0)
+      - states(''sensor.radiador_salita_power'')|float(default=0))|round(2, default=0.0)  }}'
+  - unit_of_measurement: W
+    default_entity_id: sensor.consumo_medible
+    name: Consumo de la casa medible
+    state: '{{ ((states(''sensor.bano_interior_sensor_power'')|float(default=0)) +
+      (states(''sensor.radiador_cocina_power'')|float(default=0)) + (states(''sensor.radiador_salita_power'')|float(default=0))
+      + (states(''sensor.sensor.enchufe_artillery_x1_power'')|float(default=0)) +
+      (states(''sensor.sensor.enchufe_ender_3_power'')|float(default=0)) + (states(''sensor.sensor.enchufe_blv_power'')|float(default=0))
+      + (states(''sensor.switch_escalera_1_00_00_00_escalera_interior_power'')|float(default=0))
+      + (states(''sensor.switch_escalera_2_00_00_00_escalera_interior_power'')|float(default=0))
+      + (states(''sensor.termo_50l_switch_0_power'')|float(default=0)) + (states(''sensor.switch_termo_100l_00_00_00_cuartillo_azotea_interior_power'')|float(default=0))
+      + (states(''sensor.consumo_electrodomesticos_no_medibles'')|float(default=0))
+      + (states(''sensor.armario_red_power'')|float(default=0)) + (states(''sensor.shellyem_e45b47_channel_1_power'')|float(default=0))
+      + (states(''sensor.shellyem_e45b47_channel_2_power'')|float(default=0)) + (states(''sensor.vitroceramica_power'')|float(default=0))
+      + (states(''sensor.secadora_switch_0_power'')|float(default=0)) + (states(''sensor.consumo_horno_micro_cafetera_pzem_004t_v3_power'')|float(default=0))
+      + (states(''sensor.frigorifico_blitzwolf_shp6_04_power'')|float(default=0))
+      + (states(''sensor.lavavajillas_power'')|float(default=0)) + (states(''sensor.lavadora_energy_power'')|float(default=0))
+      + (states(''sensor.consumo_a_c_channel_1_power'')|float(default=0)) + (states(''sensor.consumo_taller_consumo_taller_power'')|float(default=0)))|round(2,
+      default=0.0) }}'
+  - unit_of_measurement: W
+    default_entity_id: sensor.consumo_no_medible
+    name: Consumo de la casa no medible
+    state: '{{ (states(''sensor.shellyem_244cab418bca_channel_2_power'')|float(default=0)
+      - states(''sensor.consumo_medible'')|float(default=0))|round(2, default=0.0)
+      }}'
+  - default_entity_id: sensor.ratio_consumo_excedentes
+    name: Ratio consumo red/excedentes
+    state: '{{ (states(''sensor.excedentes_mensual'')|float(default=0) / states(''sensor.red_mensual'')|float(default=0))|round(2,
+      default=0.0)}}'
+  - unit_of_measurement: W
+    default_entity_id: sensor.ahorro_casa_w
+    name: Ahorro de la casa w
+    state: '{{ (states(''sensor.victron_system_consumption_l1'')|float(default=0))|round(2,
+      default=0.0)  }}'
+  - unit_of_measurement: L
+    default_entity_id: sensor.agua_fluyendo
+    name: Agua Fluyendo
+    state: '{{ states(''sensor.agua_caliente_counter_value'') | float > 0 }}'

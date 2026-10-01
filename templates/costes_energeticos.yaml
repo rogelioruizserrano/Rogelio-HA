@@ -1,0 +1,85 @@
+- sensor:
+  - unit_of_measurement: €
+    default_entity_id: sensor.radiador_cocina_coste_hora
+    name: Radiador de la cocina coste por hora
+    state: '{%set IVA = 1.05 | float(0) %} {%set imp_elec = 1.005 | float(0) %} {{
+      (( states(''sensor.radiador_cocina_por_hora'') | float(0) * (states(''sensor.precio_electricidad_tramos'')
+      | float(0)) ) * imp_elec * IVA )  | round(3) }}'
+  - unit_of_measurement: €
+    default_entity_id: sensor.radiador_salita_coste_hora
+    name: Radiador de la salita coste por hora
+    state: '{%set IVA = 1.05 | float(0) %} {%set imp_elec = 1.005 | float(0) %} {{
+      (( states(''sensor.radiador_salita_por_hora'') | float(0) * (states(''sensor.precio_electricidad_tramos'')
+      | float(0)) ) * imp_elec * IVA )  | round(3) }}'
+  - unit_of_measurement: €
+    default_entity_id: sensor.vitroceramica_coste_hora
+    name: Vitroceramica coste por hora
+    state: '{%set IVA = 1.05 | float(0) %} {%set imp_elec = 1.005 | float(0) %} {{
+      (( states(''sensor.vitroceramica_por_hora'') | float(0) * (states(''sensor.precio_electricidad_tramos'')
+      | float(0)) ) * imp_elec * IVA )  | round(3) }}'
+  - unique_id: horno_coste_hora
+    unit_of_measurement: €
+    default_entity_id: sensor.horno_coste_hora
+    name: Horno coste por hora
+    state: '{%set IVA = 1.05 | float(0) %} {%set imp_elec = 1.005 | float(0) %} {{
+      (( states(''sensor.horno_kwh'') | float(0) * (states(''sensor.precio_electricidad_tramos'')
+      | float(0)) ) * imp_elec * IVA )  | round(3) }}'
+  - unit_of_measurement: €
+    default_entity_id: sensor.termos_coste_hora
+    name: Termos electricos coste por hora
+    state: '{%set IVA = 1.05 | float(0) %} {%set imp_elec = 1.005 | float(0) %} {{
+      (( states(''sensor.termos_por_hora'') | float(0) * (states(''sensor.precio_electricidad_tramos'')
+      | float(0)) ) * imp_elec * IVA )  | round(3) }}'
+  - unit_of_measurement: €
+    default_entity_id: sensor.gasto_casa_hora
+    name: Gasto de la casa por hora en €
+    state: '{%set IVA = 1.05 | float(0) %} {%set imp_elec = 1.005 | float(0) %} {{
+      (( states(''sensor.red_hora'') | float(0) * (states(''sensor.precio_electricidad_tramos'')
+      | float(0)) ) * imp_elec * IVA )  | round(3) }}'
+  - unit_of_measurement: €
+    default_entity_id: sensor.excedentes_casa_hora_eur
+    name: Excedentes de la casa por hora en €
+    state: '{%set IVA = 1.05 | float(0) %} {%set imp_elec = 1.005 | float(0) %} {{
+      (( states(''sensor.excedentes_hora'') | float(0) * (states(''sensor.precio_electricidad_tramos_excedentes'')
+      | float(0)) ) * imp_elec * IVA )  | round(3) }}'
+  - unit_of_measurement: €
+    default_entity_id: sensor.ahorro_casa_coste_hora
+    name: Ahorro de la casa por hora en €
+    state: '{%set IVA = 1.05 | float(0) %} {%set imp_elec = 1.005 | float(0) %} {{
+      (( states(''sensor.ahorro_casa_por_hora'') | float(0) * (states(''sensor.precio_electricidad_tramos'')
+      | float(0)) ) * imp_elec * IVA )  | round(3) }}'
+  - unit_of_measurement: €
+    default_entity_id: sensor.valance_energetico_casa_coste_mes
+    name: Valance energetico de la casa en € al mes
+    state: '{{ (( states(''sensor.consumo_red_mes_en_eur'')|float(0)) - (states(''sensor.excedentes_mes_eur'')|float(0)))  |
+      round(2) }}'
+  - unit_of_measurement: €
+    default_entity_id: sensor.octopus_energy_valle_euros
+    name: Octopus Energy valle en euros
+    state: '{{ (( states(''sensor.octopus_energy_contador_valle'')|float(0)) * 0.12342)  |
+      round(2) }}'
+  - unit_of_measurement: €
+    default_entity_id: sensor.octopus_energy_llano_euros
+    name: Octopus Energy llano en euros
+    state: '{{ (( states(''sensor.octopus_energy_contador_llano'')|float(0)) * 0.1694)  |
+      round(2) }}'
+  - unit_of_measurement: €
+    default_entity_id: sensor.octopus_energy_punta_euros
+    name: Octopus Energy punta en euros
+    state: '{{(( states(''sensor.octopus_energy_contador_punta'')|float(0)) * 0.26015)  |
+      round(2) }}'
+  - unit_of_measurement: €
+    default_entity_id: sensor.precio_electricidad_tramos
+    name: Precio electricidad por tramos
+    state: "{% if is_state('select.octopus_energy_contador', 'Valle') %}\n  {{ 0.12342
+      }}\n{% elif is_state('select.octopus_energy_contador', 'Llano') %}\n  {{ 0.1694
+      }}\n{% else %}\n  {{ 0.26015 }}\n{% endif %}"
+  - unit_of_measurement: €
+    default_entity_id: sensor.precio_electricidad_tramos_excedentes
+    name: Precio electricidad por tramos excedentes
+    state: '0.05'
+  - unit_of_measurement: €
+    default_entity_id: sensor.excedentes_mes_eur
+    name: Precio de los excedentes en € al mes
+    state: '{{ (( states(''sensor.excedentes_mensual'')|float(0)) * (states(''sensor.precio_electricidad_tramos_excedentes'')|float(0)))  |
+      round(2) }}'

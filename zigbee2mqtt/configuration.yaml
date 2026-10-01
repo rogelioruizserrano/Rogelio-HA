@@ -1,0 +1,2 @@
+homeassistant: true
+port: /dev/ttyUSB0

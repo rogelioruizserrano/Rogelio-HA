@@ -1,0 +1,10 @@
+- sensor:
+  - default_entity_id: sensor.openweathermap_traducido
+    name: openweathermap traducido
+    state: "{% set estado_ingles = states('weather.openweathermap') %} {% set traducciones
+      = {\n  'sunny': 'soleado',\n  'cloudy': 'nublado',\n  'fog': 'nublado',\n  'partlycloudy':
+      'parcialmente nublado',\n  'lightning': 'con relampagos',\n  'rainy': 'lluvioso',\n
+      \ 'clear-night': 'noche despejada',\n  'lightning-rainy': 'con tormenta electrica',\n
+      \ 'pouring': 'lluvia torrencial',\n  'hail': 'con granizo',\n  'windy': 'ventoso',\n
+      \ 'windy-variant': 'ventoso variable',\n  'exceptional': 'excepcional',\n} %}
+      {{ traducciones.get(estado_ingles, estado_ingles) }}"

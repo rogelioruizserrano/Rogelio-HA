@@ -1,0 +1,10 @@
+aqara:
+  module: aqara
+  class: Aqara
+  timeout: 5
+  motion_sensors:
+    - binary_sensor.movimiento_entradita_occupancy
+    - binary_sensor.movimiento_escalera_alto_occupancy
+    - binary_sensor.movimiento_escalera_hall_occupancy
+    - binary_sensor.movimiento_escalera_medio_occupancy
+    - binary_sensor.movimiento_escalera_bajo_occupancy

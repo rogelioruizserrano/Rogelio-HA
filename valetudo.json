@@ -1,0 +1,95 @@
+{
+  "embedded": false,
+  "robot": {
+    "implementation": "CecotecCongaRobot",
+    "implementationSpecificConfig": {
+      "ip": "127.0.0.1"
+    }
+  },
+  "webserver": {
+    "port": 8080,
+    "basicAuth": {
+      "enabled": false,
+      "username": "valetudo",
+      "password": "valetudo"
+    },
+    "blockExternalAccess": true
+  },
+  "mqtt": {
+    "enabled": true,
+    "connection": {
+      "host": "192.168.1.4",
+      "port": 1883,
+      "tls": {
+        "enabled": false,
+        "ca": "",
+        "ignoreCertificateErrors": false
+      },
+      "authentication": {
+        "credentials": {
+          "enabled": true,
+          "username": "roy_666",
+          "password": "4253bygBYG"
+        },
+        "clientCertificate": {
+          "enabled": false,
+          "certificate": "",
+          "key": ""
+        }
+      }
+    },
+    "identity": {
+      "identifier": "r2d2"
+    },
+    "interfaces": {
+      "homie": {
+        "enabled": false,
+        "addICBINVMapProperty": false,
+        "cleanAttributesOnShutdown": false
+      },
+      "homeassistant": {
+        "enabled": true,
+        "cleanAutoconfOnShutdown": false
+      }
+    },
+    "customizations": {
+      "topicPrefix": "valetudo",
+      "provideMapData": true
+    },
+    "optionalExposedCapabilities": [
+      "SpeakerVolumeControlCapability"
+    ]
+  },
+  "ntpClient": {
+    "enabled": true,
+    "server": "pool.ntp.org",
+    "port": 123,
+    "interval": 28800000,
+    "timeout": 10000
+  },
+  "timers": {},
+  "logLevel": "info",
+  "debug": {
+    "debugHassAnchors": false,
+    "storeRawFDSUploads": false
+  },
+  "networkAdvertisement": {
+    "enabled": true
+  },
+  "updater": {
+    "enabled": true,
+    "updateProvider": {
+      "type": "github_nightly",
+      "implementationSpecificConfig": {}
+    }
+  },
+  "oobe": {
+    "welcomeDialogDismissed": false
+  },
+  "valetudo": {
+    "customizations": {
+      "friendlyName": "r2d2"
+    }
+  },
+  "_version": "2024.04"
+}

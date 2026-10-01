@@ -1,0 +1,87 @@
+# =============================================================================
+# sensor.yaml
+# -----------------------------------------------------------------------------
+# Incluido desde configuration.yaml mediante:
+#     sensor: !include sensor.yaml
+#
+# Este archivo contiene la LISTA de sensores de plataforma (integration, filter,
+# statistics, time_date, etc.). No lleva la clave `sensor:` en la primera línea
+# porque `!include` ya la aporta.
+#
+# Los sensores definidos vía template (helper moderno) van en template.yaml,
+# no aquí. Aquí solo plataformas legacy del dominio sensor.
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# Integraciones (Riemann sum) — convierten potencia (W) en energía (kWh)
+# -----------------------------------------------------------------------------
+
+- platform: integration
+  source: sensor.red
+  name: consumo_de_la_red
+  unit_prefix: k
+  method: left
+  round: 0
+
+- platform: integration
+  source: sensor.bateria_carga_mas_mppt
+  name: bateria_carga_kwh
+  unit_prefix: k
+  method: left
+  round: 0
+  unique_id: "bateria_carga_kwh"
+
+- platform: integration
+  source: sensor.bateria_descarga
+  name: bateria_descarga_kwh
+  unit_prefix: k
+  method: left
+  round: 0
+
+# -----------------------------------------------------------------------------
+# Filtros — suavizado y medias móviles
+# -----------------------------------------------------------------------------
+
+- platform: filter
+  name: "Consumo no medible filtrado"
+  entity_id: sensor.consumo_no_medible
+  filters:
+    - filter: time_simple_moving_average
+      window_size: "00:01"
+
+- platform: filter
+  name: Consumo red suavizado
+  entity_id: sensor.shellyem_244cab418bca_channel_1_power
+  filters:
+    - filter: lowpass
+      time_constant: 30
+
+- platform: filter
+  name: Tension L1 suavizada
+  entity_id: sensor.shellyem_244cab418bca_channel_1_voltage
+  filters:
+    - filter: lowpass
+      time_constant: 30
+
+
+# -----------------------------------------------------------------------------
+# Temperatura — estadísticas
+# -----------------------------------------------------------------------------
+
+- platform: statistics
+  name: "Temperatura media 24h"
+  entity_id: sensor.temperatura_media_en_casa
+  state_characteristic: mean
+  max_age:
+    hours: 24
+  sampling_size: 20
+
+
+# -----------------------------------------------------------------------------
+# Time & date
+# -----------------------------------------------------------------------------
+
+- platform: time_date
+  display_options:
+    - "time"

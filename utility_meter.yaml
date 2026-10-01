@@ -1,0 +1,72 @@
+excedentes_hora:
+  source: sensor.excedentes_kwh
+  cycle: hourly
+  unique_id: excedentes_kwh_hourly
+excedentes_diario:
+  source: sensor.excedentes_kwh
+  cycle: daily
+  unique_id: excedentes_kwh_daily
+excedentes_mensual:
+  source: sensor.excedentes_kwh
+  cycle: monthly
+  unique_id: excedentes_kwh_monthly
+excedentes_anual:
+  source: sensor.excedentes_kwh
+  cycle: yearly
+  unique_id: excedentes_kwh_yearly
+
+red_hora:
+  source: sensor.consumo_de_la_red
+  cycle: hourly
+  unique_id: consumo_de_la_red_hourly
+red_diario:
+  source: sensor.consumo_de_la_red
+  cycle: daily
+  unique_id: consumo_de_la_red_daily
+red_mensual:
+  source: sensor.consumo_de_la_red
+  cycle: monthly
+  unique_id: consumo_de_la_red_monthly
+red_anual:
+  source: sensor.consumo_de_la_red
+  cycle: yearly
+  unique_id: consumo_de_la_red_yearly
+
+bateria_carga_diario:
+  source: sensor.bateria_carga_kwh
+  cycle: daily
+  unique_id: "bateria_carga_diario"
+bateria_carga_mensual:
+  source: sensor.bateria_carga_kwh
+  cycle: monthly
+  unique_id: "bateria_carga_mensual"
+bateria_carga_anual:
+  source: sensor.bateria_carga_kwh
+  cycle: yearly
+  unique_id: "bateria_carga_anual"
+
+bateria_descarga_diario:
+  source: sensor.bateria_descarga_kwh
+  cycle: daily
+  unique_id: bateria_descarga_kwh_daily
+bateria_descarga_mensual:
+  source: sensor.bateria_descarga_kwh
+  cycle: monthly
+  unique_id: bateria_descarga_kwh_monthly
+bateria_descarga_anual:
+  source: sensor.bateria_descarga_kwh
+  cycle: yearly
+  unique_id: bateria_descarga_kwh_yearly
+
+consumo_casa_diario:
+  source: sensor.consumo_de_la_casa_kwh
+  cycle: daily
+  unique_id: consumo_de_la_casa_kwh_daily
+consumo_casa_mensual:
+  source: sensor.consumo_de_la_casa_kwh
+  cycle: monthly
+  unique_id: consumo_de_la_casa_kwh_monthly
+consumo_casa_anual:
+  source: sensor.consumo_de_la_casa_kwh
+  cycle: yearly
+  unique_id: consumo_de_la_casa_kwh_yearly

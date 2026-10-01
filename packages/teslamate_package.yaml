@@ -1,0 +1,275 @@
+# =========================================================
+# Paquete TeslaMate para Home Assistant
+# Sensores MQTT para Tesla Model Y (car_id=1)
+# Broker: 192.168.1.4 (usuario roy_666)
+#
+# Instalación:
+# 1. Asegúrate de tener "packages" habilitado en configuration.yaml:
+#      homeassistant:
+#        packages: !include_dir_named packages
+# 2. Guarda este archivo como config/packages/teslamate.yaml
+# 3. Reinicia Home Assistant (o recarga configuración YAML)
+# =========================================================
+
+mqtt:
+  # ---------------------------------------------------
+  # BATERÍA Y CARGA
+  # ---------------------------------------------------
+  sensor:
+    - name: "Tesla Batería"
+      unique_id: tesla_battery_level
+      state_topic: "teslamate/cars/1/battery_level"
+      unit_of_measurement: "%"
+      device_class: battery
+      icon: mdi:battery
+
+    - name: "Tesla Autonomía Estimada"
+      unique_id: tesla_ideal_range
+      state_topic: "teslamate/cars/1/ideal_battery_range_km"
+      unit_of_measurement: "km"
+      icon: mdi:map-marker-distance
+
+    - name: "Tesla Autonomía Nominal"
+      unique_id: tesla_rated_range
+      state_topic: "teslamate/cars/1/rated_battery_range_km"
+      unit_of_measurement: "km"
+      icon: mdi:map-marker-distance
+
+    - name: "Tesla Nivel Objetivo de Carga"
+      unique_id: tesla_charge_limit
+      state_topic: "teslamate/cars/1/charge_limit_soc"
+      unit_of_measurement: "%"
+      icon: mdi:battery-charging-high
+
+    - name: "Tesla Potencia de Carga"
+      unique_id: tesla_charger_power
+      state_topic: "teslamate/cars/1/charger_power"
+      unit_of_measurement: "kW"
+      device_class: power
+      icon: mdi:flash
+
+    - name: "Tesla Energía Añadida (sesión)"
+      unique_id: tesla_charge_energy_added
+      state_topic: "teslamate/cars/1/charge_energy_added"
+      unit_of_measurement: "kWh"
+      device_class: energy
+      icon: mdi:battery-plus
+
+    - name: "Tesla Tiempo Restante de Carga"
+      unique_id: tesla_time_to_full_charge
+      state_topic: "teslamate/cars/1/time_to_full_charge"
+      unit_of_measurement: "h"
+      icon: mdi:timer-outline
+
+    - name: "Tesla Corriente de Carga"
+      unique_id: tesla_charger_actual_current
+      state_topic: "teslamate/cars/1/charger_actual_current"
+      unit_of_measurement: "A"
+      device_class: current
+      icon: mdi:current-ac
+
+    - name: "Tesla Voltaje de Carga"
+      unique_id: tesla_charger_voltage
+      state_topic: "teslamate/cars/1/charger_voltage"
+      unit_of_measurement: "V"
+      device_class: voltage
+      icon: mdi:sine-wave
+
+    # ---------------------------------------------------
+    # ESTADO Y ODÓMETRO
+    # ---------------------------------------------------
+    - name: "Tesla Estado"
+      unique_id: tesla_state
+      state_topic: "teslamate/cars/1/state"
+      icon: mdi:car-electric
+
+    - name: "Tesla Odómetro"
+      unique_id: tesla_odometer
+      state_topic: "teslamate/cars/1/odometer"
+      unit_of_measurement: "km"
+      icon: mdi:counter
+      state_class: total_increasing
+
+    - name: "Tesla Geocerca"
+      unique_id: tesla_geofence
+      state_topic: "teslamate/cars/1/geofence"
+      icon: mdi:map-marker-radius
+
+    - name: "Tesla Versión Firmware"
+      unique_id: tesla_version
+      state_topic: "teslamate/cars/1/version"
+      icon: mdi:chip
+
+    - name: "Tesla Desde (since)"
+      unique_id: tesla_since
+      state_topic: "teslamate/cars/1/since"
+      device_class: timestamp
+      icon: mdi:clock-outline
+
+    # ---------------------------------------------------
+    # CLIMA
+    # ---------------------------------------------------
+    - name: "Tesla Temperatura Interior"
+      unique_id: tesla_inside_temp
+      state_topic: "teslamate/cars/1/inside_temp"
+      unit_of_measurement: "°C"
+      device_class: temperature
+      icon: mdi:thermometer
+
+    - name: "Tesla Temperatura Exterior"
+      unique_id: tesla_outside_temp
+      state_topic: "teslamate/cars/1/outside_temp"
+      unit_of_measurement: "°C"
+      device_class: temperature
+      icon: mdi:thermometer
+
+    # ---------------------------------------------------
+    # CONDUCCIÓN / VELOCIDAD
+    # ---------------------------------------------------
+    - name: "Tesla Velocidad"
+      unique_id: tesla_speed
+      state_topic: "teslamate/cars/1/speed"
+      unit_of_measurement: "km/h"
+      icon: mdi:speedometer
+
+    - name: "Tesla Potencia Actual"
+      unique_id: tesla_power
+      state_topic: "teslamate/cars/1/power"
+      unit_of_measurement: "kW"
+      device_class: power
+      icon: mdi:lightning-bolt
+
+    # ---------------------------------------------------
+    # NEUMÁTICOS
+    # ---------------------------------------------------
+    - name: "Tesla Presión Neumático Delantero Izq"
+      unique_id: tesla_tpms_fl
+      state_topic: "teslamate/cars/1/tpms_pressure_fl"
+      unit_of_measurement: "bar"
+      icon: mdi:car-tire-alert
+
+    - name: "Tesla Presión Neumático Delantero Der"
+      unique_id: tesla_tpms_fr
+      state_topic: "teslamate/cars/1/tpms_pressure_fr"
+      unit_of_measurement: "bar"
+      icon: mdi:car-tire-alert
+
+    - name: "Tesla Presión Neumático Trasero Izq"
+      unique_id: tesla_tpms_rl
+      state_topic: "teslamate/cars/1/tpms_pressure_rl"
+      unit_of_measurement: "bar"
+      icon: mdi:car-tire-alert
+
+    - name: "Tesla Presión Neumático Trasero Der"
+      unique_id: tesla_tpms_rr
+      state_topic: "teslamate/cars/1/tpms_pressure_rr"
+      unit_of_measurement: "bar"
+      icon: mdi:car-tire-alert
+
+  # ---------------------------------------------------
+  # BINARY SENSORS (puertas, ventanas, cinturones, enchufado...)
+  # ---------------------------------------------------
+  binary_sensor:
+    - name: "Tesla Enchufado"
+      unique_id: tesla_plugged_in
+      state_topic: "teslamate/cars/1/plugged_in"
+      payload_on: "true"
+      payload_off: "false"
+      device_class: plug
+      icon: mdi:power-plug
+
+    - name: "Tesla Cargando"
+      unique_id: tesla_charging
+      state_topic: "teslamate/cars/1/state"
+      payload_on: "charging"
+      payload_off: "not_charging"
+      value_template: >-
+        {% if value == "charging" %}true{% else %}false{% endif %}
+      device_class: battery_charging
+      icon: mdi:battery-charging
+
+    - name: "Tesla Puerta Conductor"
+      unique_id: tesla_door_df
+      state_topic: "teslamate/cars/1/doors_open"
+      payload_on: "true"
+      payload_off: "false"
+      device_class: door
+      icon: mdi:car-door
+
+    - name: "Tesla Ventanas Abiertas"
+      unique_id: tesla_windows_open
+      state_topic: "teslamate/cars/1/windows_open"
+      payload_on: "true"
+      payload_off: "false"
+      device_class: window
+      icon: mdi:car-door
+
+    - name: "Tesla Maletero Abierto"
+      unique_id: tesla_trunk_open
+      state_topic: "teslamate/cars/1/trunk_open"
+      payload_on: "true"
+      payload_off: "false"
+      device_class: opening
+      icon: mdi:car-back
+
+    - name: "Tesla Capó Abierto"
+      unique_id: tesla_frunk_open
+      state_topic: "teslamate/cars/1/frunk_open"
+      payload_on: "true"
+      payload_off: "false"
+      device_class: opening
+      icon: mdi:car-lifted-pickup
+
+    - name: "Tesla Cinturón Conductor"
+      unique_id: tesla_seatbelt
+      state_topic: "teslamate/cars/1/is_user_present"
+      payload_on: "true"
+      payload_off: "false"
+      icon: mdi:seatbelt
+
+    - name: "Tesla Salud del Coche"
+      unique_id: tesla_healthy
+      state_topic: "teslamate/cars/1/healthy"
+      payload_on: "true"
+      payload_off: "false"
+      device_class: problem
+      icon: mdi:heart-pulse
+
+    - name: "Tesla Modo Centinela"
+      unique_id: tesla_sentry_mode
+      state_topic: "teslamate/cars/1/sentry_mode"
+      payload_on: "true"
+      payload_off: "false"
+      icon: mdi:shield-car
+
+    - name: "Tesla Modo Bioarma"
+      unique_id: tesla_bioweapon_mode
+      state_topic: "teslamate/cars/1/is_climate_on"
+      payload_on: "true"
+      payload_off: "false"
+      device_class: running
+      icon: mdi:air-conditioner
+
+  # ---------------------------------------------------
+  # DEVICE TRACKER (ubicación en el mapa de HA)
+  # ---------------------------------------------------
+  device_tracker:
+    - name: "Tesla Model Y"
+      unique_id: tesla_model_y_tracker
+      state_topic: "teslamate/cars/1/geofence"
+      json_attributes_topic: "teslamate/cars/1/location"
+
+# =========================================================
+# SENSOR DE PLANTILLA ÚTIL: kWh restantes hasta el 100%
+# (combina batería actual y objetivo para saber cuánto falta)
+# =========================================================
+template:
+  - sensor:
+      - name: "Tesla % Restante para Objetivo"
+        unique_id: tesla_pct_restante_objetivo
+        unit_of_measurement: "%"
+        icon: mdi:battery-clock
+        state: >-
+          {% set actual = states('sensor.tesla_bateria') | float(0) %}
+          {% set objetivo = states('sensor.tesla_nivel_objetivo_de_carga') | float(0) %}
+          {{ (objetivo - actual) | round(0) }}
