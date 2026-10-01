@@ -4879,3 +4879,20 @@
     - rad_cocina
     - termo
     - aa
+- id: '1790894290111'
+  alias: Backup config a GitHub
+  triggers:
+  - trigger: time
+    at: 03:15:00
+  actions:
+  - action: shell_command.git_push
+    response_variable: git
+  - if:
+    - condition: template
+      value_template: '{{ git.returncode != 0 }}'
+    then:
+    - action: notify.notify
+      data:
+        title: Git push falló
+        message: '{{ git.stderr or git.stdout }}'
+  mode: single

@@ -10,3 +10,7 @@ fi
 
 git commit -q -m "Auto: $(date '+%Y-%m-%d %H:%M') — $(git diff --cached --name-only | wc -l) ficheros"
 git push -q origin main 2>&1
+cd /config/esphome || exit 0
+git add -A
+git diff --cached --quiet || git commit -q -m "Auto: $(date '+%Y-%m-%d %H:%M')"
+git push -q origin HEAD:esphome 2>&1
