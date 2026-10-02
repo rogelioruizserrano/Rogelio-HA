@@ -23,6 +23,9 @@ substitutions:
   ent_ac_potencia: sensor.aire_acondicionado_power
   t_min: "16"
   t_max: "30"
+  brillo_activo: "100%"
+  brillo_reposo: "12%"
+  t_reposo: "60000"    # ms
 
 esphome:
   name: ${name}
@@ -62,7 +65,7 @@ wifi:
     password: !secret ap_password
 
 captive_portal:
-
+ 
 # ---------------------------------------------------------------------
 #  Variables internas
 # ---------------------------------------------------------------------
@@ -97,10 +100,13 @@ globals:
   - id: g_ult_giro          # evita que HA pise el valor mientras giras
     type: uint32_t
     initial_value: '0'
-  - id: g_ult_act           # última interacción (apagado de pantalla)
+  - id: g_ult_act           # última interacción (atenuado de pantalla)
     type: uint32_t
     initial_value: '0'
-
+  - id: g_atenuado          # true = pantalla en reposo (atenuada)
+    type: bool
+    initial_value: 'false'
+ 
 # ---------------------------------------------------------------------
 #  Hardware
 # ---------------------------------------------------------------------
@@ -113,7 +119,7 @@ output:
   - platform: ledc
     pin: GPIO9
     id: out_backlight
-
+ 
 light:
   - platform: monochromatic
     id: backlight
@@ -121,16 +127,16 @@ light:
     output: out_backlight
     restore_mode: ALWAYS_ON
     default_transition_length: 200ms
-
+ 
 i2c:
   id: bus_int
   sda: GPIO11
   scl: GPIO12
-
+ 
 spi:
   mosi_pin: GPIO5
   clk_pin: GPIO6
-
+ 
 display:
   - platform: mipi_spi
     id: lcd
@@ -141,7 +147,7 @@ display:
     invert_colors: true        # si los colores salen invertidos -> false
     auto_clear_enabled: false
     update_interval: never
-
+ 
 touchscreen:
   - platform: ft5x06           # FT3267
     id: touch
@@ -150,7 +156,7 @@ touchscreen:
     interrupt_pin: GPIO14
     on_touch:
       - script.execute: actividad
-
+ 
 binary_sensor:
   - platform: gpio
     id: boton
@@ -167,7 +173,7 @@ binary_sensor:
         then:
           - if:
               condition:
-                light.is_on: backlight
+                lambda: 'return !id(g_atenuado);'
               then:
                 - script.execute: siguiente_pagina
           - script.execute: actividad
@@ -176,11 +182,11 @@ binary_sensor:
         then:
           - if:
               condition:
-                light.is_on: backlight
+                lambda: 'return !id(g_atenuado);'
               then:
                 - script.execute: accion_onoff
           - script.execute: actividad
-
+ 
 time:
   - platform: homeassistant
     id: ha_time
@@ -191,7 +197,7 @@ time:
       - seconds: 0
         then:
           - script.execute: actualizar_reloj
-
+ 
 # ---------------------------------------------------------------------
 #  Encoder + datos de Home Assistant
 # ---------------------------------------------------------------------
@@ -218,7 +224,7 @@ sensor:
       - script.execute:
           id: girar
           delta: -1
-
+ 
   - platform: homeassistant
     id: ha_temp_casa
     entity_id: ${ent_temp_casa}
@@ -228,14 +234,14 @@ sensor:
           text:
             format: "%.1f°C"
             args: ['x']
-
+ 
   - platform: homeassistant
     id: ha_temp_ext
     entity_id: ${ent_tiempo}
     attribute: temperature
     on_value:
       - script.execute: actualizar_tiempo
-
+ 
   - platform: homeassistant
     id: ha_ac_actual
     entity_id: ${ent_clima}
@@ -246,7 +252,7 @@ sensor:
           text:
             format: "Actual %.1f°C"
             args: ['x']
-
+ 
   - platform: homeassistant
     id: ha_ac_consigna
     entity_id: ${ent_clima}
@@ -258,14 +264,14 @@ sensor:
           then:
             - lambda: 'id(g_consigna) = x;'
             - script.execute: pintar_consigna
-
+ 
   - platform: homeassistant
     id: ha_luz_brillo
     entity_id: ${ent_luz}
     attribute: brightness
     on_value:
       - script.execute: sincronizar_luz
-
+ 
   - platform: homeassistant
     id: ha_ac_potencia
     entity_id: ${ent_ac_potencia}
@@ -275,14 +281,14 @@ sensor:
           text:
             format: "%.0f W"
             args: ['x']
-
+ 
 text_sensor:
   - platform: homeassistant
     id: ha_tiempo
     entity_id: ${ent_tiempo}
     on_value:
       - script.execute: actualizar_tiempo
-
+ 
   - platform: homeassistant
     id: ha_ac_estado
     entity_id: ${ent_clima}
@@ -300,14 +306,14 @@ text_sensor:
       - lvgl.widget.update:
           id: btn_ac
           bg_color: !lambda 'return x == "off" ? lv_color_hex(0x2A2A2A) : lv_color_hex(0x0A84FF);'
-
+ 
   - platform: homeassistant
     id: ha_luz_rgbw
     entity_id: ${ent_luz}
     attribute: rgbw_color
     on_value:
       - script.execute: sincronizar_luz
-
+ 
   - platform: homeassistant
     id: ha_luz_estado
     entity_id: ${ent_luz}
@@ -318,23 +324,26 @@ text_sensor:
       - lvgl.widget.update:
           id: btn_luz
           bg_color: !lambda 'return x == "on" ? lv_color_hex(0xFFB300) : lv_color_hex(0x2A2A2A);'
-
+ 
 # ---------------------------------------------------------------------
 #  Apagado de pantalla por inactividad
 # ---------------------------------------------------------------------
 interval:
-  - interval: 5s
+  - interval: 2s
     then:
       - if:
           condition:
-            and:
-              - light.is_on: backlight
-              - lambda: 'return millis() - id(g_ult_act) > 60000;'
+            lambda: 'return !id(g_atenuado) && (millis() - id(g_ult_act) > ${t_reposo});'
           then:
-            - light.turn_off: backlight
-            - lambda: 'id(g_pagina) = 0;'
+            - lambda: |-
+                id(g_atenuado) = true;
+                id(g_pagina) = 0;
             - lvgl.page.show: pag_inicio
-
+            - light.turn_on:
+                id: backlight
+                brightness: ${brillo_reposo}
+                transition_length: 1500ms
+ 
 # ---------------------------------------------------------------------
 #  Scripts
 # ---------------------------------------------------------------------
@@ -345,10 +354,14 @@ script:
       - lambda: 'id(g_ult_act) = millis();'
       - if:
           condition:
-            light.is_off: backlight
+            lambda: 'return id(g_atenuado);'
           then:
-            - light.turn_on: backlight
-
+            - lambda: 'id(g_atenuado) = false;'
+            - light.turn_on:
+                id: backlight
+                brightness: ${brillo_activo}
+                transition_length: 300ms
+ 
   - id: siguiente_pagina
     then:
       - lambda: |-
@@ -369,7 +382,7 @@ script:
             lambda: 'return id(g_pagina) == 2;'
           then:
             - lvgl.page.show: pag_luz
-
+ 
   - id: girar
     mode: queued
     max_runs: 20
@@ -378,7 +391,7 @@ script:
     then:
       - if:
           condition:
-            light.is_on: backlight
+            lambda: 'return !id(g_atenuado);'
           then:
             - lambda: |-
                 id(g_ult_giro) = millis();
@@ -401,7 +414,7 @@ script:
                   - script.execute: pintar_brillo
                   - script.execute: enviar_luz
       - script.execute: actividad
-
+ 
   - id: pintar_consigna
     mode: restart
     then:
@@ -413,7 +426,7 @@ script:
           text:
             format: "%.1f°"
             args: ['id(g_consigna)']
-
+ 
   - id: pintar_brillo
     mode: restart
     then:
@@ -425,7 +438,7 @@ script:
           text:
             format: "%d%%"
             args: ['id(g_brillo)']
-
+ 
   # Envío con retardo: solo se manda el valor final tras dejar de girar
   - id: enviar_consigna
     mode: restart
@@ -439,7 +452,7 @@ script:
             temperature: "{{ t }}"
           variables:
             t: !lambda 'return id(g_consigna);'
-
+ 
   # Brillo conjunto: se escalan los 4 canales (R,G,B,W) y brightness al 100%,
   # así el regulador actúa igual sobre RGB y sobre el canal blanco.
   - id: enviar_luz
@@ -458,13 +471,13 @@ script:
             cg: !lambda 'return (int) roundf(id(g_g) * id(g_brillo) / 100.0f);'
             cb: !lambda 'return (int) roundf(id(g_b) * id(g_brillo) / 100.0f);'
             cw: !lambda 'return (int) roundf(id(g_w) * id(g_brillo) / 100.0f);'
-
+ 
   - id: abrir_color
     then:
       - lambda: 'id(g_pagina) = 3;'
       - lvgl.page.show: pag_color
       - script.execute: actividad
-
+ 
   - id: elegir_color
     parameters:
       r: int
@@ -480,7 +493,7 @@ script:
       - script.execute: enviar_luz
       - lvgl.page.show: pag_luz
       - script.execute: actividad
-
+ 
   # Lee rgbw_color + brightness de HA y los convierte al modelo del Dial:
   #   color efectivo  e_i = c_i * brightness/255
   #   brillo (%)      = max(e_i) / 255 * 100
@@ -516,7 +529,7 @@ script:
           then:
             - script.execute: pintar_brillo
             - script.execute: pintar_muestra
-
+ 
   - id: pintar_muestra
     then:
       - lvgl.widget.update:
@@ -524,7 +537,7 @@ script:
           bg_color: !lambda |-
             if (id(g_r) == 0 && id(g_g) == 0 && id(g_b) == 0) return lv_color_hex(0xFFF1D6);
             return lv_color_make(id(g_r), id(g_g), id(g_b));
-
+ 
   - id: toggle_ac
     then:
       - if:
@@ -542,14 +555,14 @@ script:
                 action: climate.turn_off
                 data:
                   entity_id: ${ent_clima}
-
+ 
   - id: toggle_luz
     then:
       - homeassistant.action:
           action: light.toggle
           data:
             entity_id: ${ent_luz}
-
+ 
   - id: accion_onoff
     then:
       - if:
@@ -562,7 +575,7 @@ script:
             lambda: 'return id(g_pagina) == 2;'
           then:
             - script.execute: toggle_luz
-
+ 
   - id: actualizar_reloj
     then:
       - lvgl.label.update:
@@ -581,7 +594,7 @@ script:
             char buf[40];
             snprintf(buf, sizeof(buf), "%s, %d %s", dias[t.day_of_week - 1], t.day_of_month, meses[t.month - 1]);
             return std::string(buf);
-
+ 
   - id: actualizar_tiempo
     then:
       - lvgl.label.update:
@@ -605,7 +618,7 @@ script:
             if (isnan(t)) snprintf(buf, sizeof(buf), "%s", d.c_str());
             else          snprintf(buf, sizeof(buf), "%s · %.0f°C", d.c_str(), t);
             return std::string(buf);
-
+ 
 # ---------------------------------------------------------------------
 #  Fuentes
 # ---------------------------------------------------------------------
@@ -632,7 +645,7 @@ font:
     id: f_txt
     size: 18
     glyphs: " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZáéíóúüñÁÉÍÓÚÜÑ0123456789.,:;-_·°%/()'!?"
-
+ 
 # ---------------------------------------------------------------------
 #  Interfaz LVGL
 # ---------------------------------------------------------------------
@@ -651,7 +664,7 @@ lvgl:
       bg_color: 0x2A2A2A
       shadow_width: 0
       border_width: 0
-
+ 
   pages:
     # ---------------- INICIO ----------------
     - id: pag_inicio
@@ -682,7 +695,7 @@ lvgl:
             y: 70
             text_color: 0x9E9E9E
             text: ""
-
+ 
     # ---------------- CLIMA ----------------
     - id: pag_clima
       bg_color: 0x000000
@@ -741,7 +754,7 @@ lvgl:
                   align: CENTER
                   text_font: montserrat_20
                   text: "\uF011"
-
+ 
     # ---------------- LUZ ----------------
     - id: pag_luz
       bg_color: 0x000000
@@ -807,7 +820,7 @@ lvgl:
                   align: CENTER
                   text_font: montserrat_20
                   text: "\uF011"
-
+ 
     # ---------------- SELECTOR DE COLOR ----------------
     # Fuera del ciclo de páginas: se abre tocando la página de luz.
     # Pulsación corta del dial = volver sin cambiar.
