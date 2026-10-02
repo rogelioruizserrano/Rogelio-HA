@@ -45,8 +45,7 @@ logger:
 
 api:
   encryption:
-    key: !secret m5dial_api_key
-
+    key: !secret dial_api_key
 ota:
   - platform: esphome
     encryption:
