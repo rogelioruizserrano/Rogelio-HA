@@ -200,13 +200,13 @@ sensor:
     id: encoder
     internal: true
     resolution: 1              # 1 paso por detent; ajustar si salta doble
-    pin_a:
-      number: GPIO41
+    pin_a:                     # A/B intercambiados: derecha = subir
+      number: GPIO40
       mode:
         input: true
         pullup: true
     pin_b:
-      number: GPIO40
+      number: GPIO41
       mode:
         input: true
         pullup: true
@@ -815,11 +815,13 @@ lvgl:
       bg_color: 0x000000
       skip: true
       widgets:
-        - button:
+        # Centro: blancos
+        - button:                    # solo canal W
             align: CENTER
-            width: 76
-            height: 76
-            radius: 38
+            y: -19
+            width: 72
+            height: 34
+            radius: 17
             bg_color: 0xFFF1D6
             on_click:
               - script.execute: {id: elegir_color, r: 0, g: 0, b: 0, w: 255}
@@ -828,6 +830,22 @@ lvgl:
                   align: CENTER
                   text_color: 0x000000
                   text: "Blanco"
+        - button:                    # W + RGB a tope = máxima intensidad
+            align: CENTER
+            y: 19
+            width: 72
+            height: 34
+            radius: 17
+            bg_color: 0xFFFFFF
+            border_width: 2
+            border_color: 0xFFB300
+            on_click:
+              - script.execute: {id: elegir_color, r: 255, g: 255, b: 255, w: 255}
+            widgets:
+              - label:
+                  align: CENTER
+                  text_color: 0x000000
+                  text: "Máx"
         - button:
             align: CENTER
             x: 0
