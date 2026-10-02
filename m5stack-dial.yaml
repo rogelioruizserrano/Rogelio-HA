@@ -915,3 +915,11 @@ lvgl:
             bg_color: 0xFF0078
             on_click:
               - script.execute: {id: elegir_color, r: 255, g: 0, b: 120, w: 0}
+rc522_i2c:
+  i2c_id: bus_int
+  address: 0x28
+  # sin reset_pin: GPIO8 lo usa el LCD
+  on_tag:
+    then:
+      - homeassistant.tag_scanned: !lambda 'return x;'
+      - script.execute: actividad      # despierta la pantalla
