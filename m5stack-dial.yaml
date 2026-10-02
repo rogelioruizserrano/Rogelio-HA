@@ -1,165 +1,673 @@
-packages:
-  defaults:    !include src/main/defaults.yaml
-  hardware:    !include src/main/hardware.yaml
-  load_page:   !include src/pages/load.yaml
-  clock_page:  !include src/pages/main.yaml
-  menu_page:   !include src/pages/menu.yaml
-  light_page:  !include src/pages/light.yaml
-  light_selector_page: !include src/pages/light_selector.yaml
-  entity_selector_page: !include src/pages/entity_selector.yaml
-  air_page:    !include src/pages/air.yaml
-  music_page:  !include src/pages/music.yaml
-  cover_page:  !include src/pages/cover.yaml
-  switch_page: !include src/pages/switch.yaml
-  scene_page:  !include src/pages/scene.yaml
-  temp_page:   !include src/pages/temp.yaml
-  alarm_page:  !include src/pages/alarm.yaml
-  idle:        !include src/main/idle.yaml
-
-external_components:
-  # GitHub, not type: local — ESPHome resolves local paths against the
-  # user's /config/esphome folder, not this package.
-  - source: github://Glooob-domo/m5stack-dial-home-assistant@main
-    components: [dial_lights, dial_ha_list, dial_climates, dial_media_players, dial_covers, dial_garages, dial_switches, dial_scenes, dial_temperatures, dial_carousel, dial_i18n, generic_image, media_source, sendspin]
-    refresh: 0s
+# =====================================================================
+#  M5Stack Dial (K130) - ESPHome + LVGL - UI minimalista
+#  Página 0: hora / fecha / temperatura casa / tiempo
+#  Página 1: climatización (consigna + on/off)
+#  Página 2: iluminación (brillo + on/off)
+#
+#  Controles:
+#   - Girar dial ............ ajusta consigna (pág. 1) o brillo (pág. 2)
+#   - Pulsación corta ....... página siguiente
+#   - Pulsación larga ....... on/off de la entidad de la página
+#   - Toque en botón ⏻ ...... on/off
+#   - 60 s sin uso .......... apaga pantalla y vuelve a inicio
+# =====================================================================
 
 substitutions:
-  # Remote packages cannot resolve !secret themselves. Set these from the
-  # consumer configuration (usually with !secret values in that local file).
-  device_name: m5stack-dialv1
-  device_friendly_name: M5Stack Dial
-  wifi_ssid: !secret wifi_ssid
-  wifi_password: !secret wifi_password
-  ap_ssid: Dial Fallback Hotspot
-  ap_password: change-me-fallback-password
-  ota_password: change-me-ota-password
-  screen_dim_timeout: 45s
-  screen_return_timeout: 5min
-  screen_off_timeout: 30min
-  screen_dim_brightness: "20%"
-  encoder_resolution: "1"
-  # Amount one encoder step changes on pages that edit an entity value.
-  cover_position_step: "5"      # % per step, 1-100
-  light_brightness_step: "1"    # % per step, 1-100
-  climate_temperature_step: "2" # 0.5C units per step: 2 = 1C, 1 = 0.5C
-  music_volume_step: "10"       # % per step, 1-100
+  name: m5-dial
+  friendly_name: M5 Dial
+  ent_clima: climate.casa
+  ent_luz: light.shellyplusrgbwpm_30c922570a00
+  ent_tiempo: weather.pirateweather
+  ent_temp_casa: sensor.temperatura_media_casa   # <-- AJUSTAR (ver nota)
+  t_min: "16"
+  t_max: "30"
 
 esphome:
-  name: ${device_name}
-  friendly_name: ${device_friendly_name}
-  min_version: 2026.7.0
-  # interval: (PollingComponent/scheduler) never fired on this device -
-  # confirmed by diagnostic logging on every page that used it, while
-  # on_loop (runs every main-loop iteration, no scheduler involved) fired
-  # reliably. Every periodic tick in this project now runs from on_loop
-  # blocks (one per page, each with its own millis() throttle) instead of
-  # interval:, merged here from src/main/idle.yaml and src/pages/*.yaml.
+  name: ${name}
+  friendly_name: ${friendly_name}
   on_boot:
-    - priority: 800
+    - priority: 1000
       then:
-        - switch.turn_on: power_hold
+        - output.turn_on: power_hold        # mantener alimentación (G46)
     - priority: -100
       then:
-        - pcf8563.read_time:
-        - light.turn_on:
-            id: display_backlight
-            brightness: 100%
-        - script.execute: update_loading_page
-        - lambda: |-
-            // Every page drives the encoder itself via on_clockwise/
-            // on_anticlockwise; LVGL's own group-focus navigation is never
-            // wanted. Detach it globally instead of excluding widgets one
-            // by one (see Music's prev/play/next buttons, which stayed
-            // focusable and both visibly grabbed selection on rotation and
-            // ate the front-button ENTER press meant for on_multi_click).
-            lv_indev_set_group(id(lvgl_rotary_indev).get_drv(), nullptr);
+        - lambda: 'id(g_ult_act) = millis();'
+        - script.execute: actualizar_reloj
 
 esp32:
-  board: m5stack-stamps3
-  variant: esp32s3
+  board: esp32-s3-devkitc-1
+  flash_size: 8MB
   framework:
     type: esp-idf
-    sdkconfig_options:
-      CONFIG_BROWNOUT_DET: "n"
 
 logger:
   level: INFO
 
 api:
   encryption:
-    key: !secret dial_api_key
-  on_client_connected:
-    - if:
-        condition:
-          lambda: 'return (0 == client_info.find("Home Assistant "));'
-        then:
-          - script.execute: on_ha_connected
-  on_client_disconnected:
-    - if:
-        condition:
-          lambda: 'return (0 == client_info.find("Home Assistant "));'
-        then:
-          - globals.set:
-              id: ha_connected
-              value: 'false'
+    key: !secret m5dial_api_key
 
 ota:
   - platform: esphome
     encryption:
 
 wifi:
-  ssid: ${wifi_ssid}
-  password: ${wifi_password}
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
   ap:
-    ssid: ${ap_ssid}
-    password: ${ap_password}
+    password: !secret ap_password
 
-captive_portal:
-
-dial_i18n:
-  language: ${ui_language}
-
+# ---------------------------------------------------------------------
+#  Variables internas
+# ---------------------------------------------------------------------
 globals:
-  - id: ha_connected
-    type: bool
-    initial_value: 'false'
+  - id: g_pagina
+    type: int
+    initial_value: '0'
+  - id: g_consigna
+    type: float
+    initial_value: '24.0'
+  - id: g_brillo
+    type: int
+    initial_value: '50'
+  - id: g_ult_giro          # evita que HA pise el valor mientras giras
+    type: uint32_t
+    initial_value: '0'
+  - id: g_ult_act           # última interacción (apagado de pantalla)
+    type: uint32_t
+    initial_value: '0'
 
-image:
-  - platform: file
-    file: ${asset_url}src/assets/images/logo.png
-    id: logo_img
-    type: RGB565
-    transparency: alpha_channel
-    resize: 72x72
+# ---------------------------------------------------------------------
+#  Hardware
+# ---------------------------------------------------------------------
+output:
+  - platform: gpio
+    pin: GPIO46
+    id: power_hold
+  - platform: ledc
+    pin: GPIO9
+    id: out_backlight
 
-color:
-  - id: col_bg
-    hex: "050812"
-  - id: col_text_pri
-    hex: "EEF2FF"
-  - id: col_text_sec
-    hex: "6B7FCC"
+light:
+  - platform: monochromatic
+    id: backlight
+    name: Pantalla
+    output: out_backlight
+    restore_mode: ALWAYS_ON
+    default_transition_length: 200ms
 
+i2c:
+  id: bus_int
+  sda: GPIO11
+  scl: GPIO12
+
+spi:
+  mosi_pin: GPIO5
+  clk_pin: GPIO6
+
+display:
+  - platform: ili9xxx
+    id: lcd
+    model: GC9A01A
+    cs_pin: GPIO7
+    dc_pin: GPIO4
+    reset_pin: GPIO8
+    invert_colors: true        # si los colores salen invertidos -> false
+    auto_clear_enabled: false
+    update_interval: never
+
+touchscreen:
+  - platform: ft5x06           # FT3267
+    id: touch
+    i2c_id: bus_int
+    address: 0x38
+    interrupt_pin: GPIO14
+    on_touch:
+      - script.execute: actividad
+
+binary_sensor:
+  - platform: gpio
+    id: boton
+    internal: true
+    pin:
+      number: GPIO42
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    on_click:
+      - min_length: 30ms
+        max_length: 600ms
+        then:
+          - if:
+              condition:
+                light.is_on: backlight
+              then:
+                - script.execute: siguiente_pagina
+          - script.execute: actividad
+      - min_length: 800ms
+        max_length: 4s
+        then:
+          - if:
+              condition:
+                light.is_on: backlight
+              then:
+                - script.execute: accion_onoff
+          - script.execute: actividad
+
+time:
+  - platform: homeassistant
+    id: ha_time
+    timezone: Europe/Madrid
+    on_time_sync:
+      - script.execute: actualizar_reloj
+    on_time:
+      - seconds: 0
+        then:
+          - script.execute: actualizar_reloj
+
+# ---------------------------------------------------------------------
+#  Encoder + datos de Home Assistant
+# ---------------------------------------------------------------------
+sensor:
+  - platform: rotary_encoder
+    id: encoder
+    internal: true
+    resolution: 1              # 1 paso por detent; ajustar si salta doble
+    pin_a:
+      number: GPIO41
+      mode:
+        input: true
+        pullup: true
+    pin_b:
+      number: GPIO40
+      mode:
+        input: true
+        pullup: true
+    on_clockwise:
+      - script.execute:
+          id: girar
+          delta: 1
+    on_anticlockwise:
+      - script.execute:
+          id: girar
+          delta: -1
+
+  - platform: homeassistant
+    id: ha_temp_casa
+    entity_id: ${ent_temp_casa}
+    on_value:
+      - lvgl.label.update:
+          id: lbl_temp_casa
+          text:
+            format: "%.1f°C"
+            args: ['x']
+
+  - platform: homeassistant
+    id: ha_temp_ext
+    entity_id: ${ent_tiempo}
+    attribute: temperature
+    on_value:
+      - script.execute: actualizar_tiempo
+
+  - platform: homeassistant
+    id: ha_ac_actual
+    entity_id: ${ent_clima}
+    attribute: current_temperature
+    on_value:
+      - lvgl.label.update:
+          id: lbl_ac_actual
+          text:
+            format: "Actual %.1f°C"
+            args: ['x']
+
+  - platform: homeassistant
+    id: ha_ac_consigna
+    entity_id: ${ent_clima}
+    attribute: temperature
+    on_value:
+      - if:
+          condition:
+            lambda: 'return !isnan(x) && (millis() - id(g_ult_giro) > 3000);'
+          then:
+            - lambda: 'id(g_consigna) = x;'
+            - script.execute: pintar_consigna
+
+  - platform: homeassistant
+    id: ha_luz_brillo
+    entity_id: ${ent_luz}
+    attribute: brightness
+    on_value:
+      - if:
+          condition:
+            lambda: 'return !isnan(x) && (millis() - id(g_ult_giro) > 3000);'
+          then:
+            - lambda: 'id(g_brillo) = std::max(1, (int) roundf(x * 100.0f / 255.0f));'
+            - script.execute: pintar_brillo
+
+text_sensor:
+  - platform: homeassistant
+    id: ha_tiempo
+    entity_id: ${ent_tiempo}
+    on_value:
+      - script.execute: actualizar_tiempo
+
+  - platform: homeassistant
+    id: ha_ac_estado
+    entity_id: ${ent_clima}
+    on_value:
+      - lvgl.label.update:
+          id: lbl_ac_modo
+          text: !lambda |-
+            if (x == "off")       return std::string("Apagado");
+            if (x == "cool")      return std::string("Frío");
+            if (x == "heat")      return std::string("Calor");
+            if (x == "dry")       return std::string("Deshumidificar");
+            if (x == "fan_only")  return std::string("Ventilador");
+            if (x == "auto" || x == "heat_cool") return std::string("Auto");
+            return x;
+      - lvgl.widget.update:
+          id: btn_ac
+          bg_color: !lambda 'return x == "off" ? lv_color_hex(0x2A2A2A) : lv_color_hex(0x0A84FF);'
+
+  - platform: homeassistant
+    id: ha_luz_estado
+    entity_id: ${ent_luz}
+    on_value:
+      - lvgl.label.update:
+          id: lbl_luz_estado
+          text: !lambda 'return x == "on" ? std::string("Encendida") : std::string("Apagada");'
+      - lvgl.widget.update:
+          id: btn_luz
+          bg_color: !lambda 'return x == "on" ? lv_color_hex(0xFFB300) : lv_color_hex(0x2A2A2A);'
+
+# ---------------------------------------------------------------------
+#  Apagado de pantalla por inactividad
+# ---------------------------------------------------------------------
+interval:
+  - interval: 5s
+    then:
+      - if:
+          condition:
+            and:
+              - light.is_on: backlight
+              - lambda: 'return millis() - id(g_ult_act) > 60000;'
+          then:
+            - light.turn_off: backlight
+            - lambda: 'id(g_pagina) = 0;'
+            - lvgl.page.show: pag_inicio
+
+# ---------------------------------------------------------------------
+#  Scripts
+# ---------------------------------------------------------------------
+script:
+  - id: actividad
+    mode: restart
+    then:
+      - lambda: 'id(g_ult_act) = millis();'
+      - if:
+          condition:
+            light.is_off: backlight
+          then:
+            - light.turn_on: backlight
+
+  - id: siguiente_pagina
+    then:
+      - lambda: 'id(g_pagina) = (id(g_pagina) + 1) % 3;'
+      - if:
+          condition:
+            lambda: 'return id(g_pagina) == 0;'
+          then:
+            - lvgl.page.show: pag_inicio
+      - if:
+          condition:
+            lambda: 'return id(g_pagina) == 1;'
+          then:
+            - lvgl.page.show: pag_clima
+      - if:
+          condition:
+            lambda: 'return id(g_pagina) == 2;'
+          then:
+            - lvgl.page.show: pag_luz
+
+  - id: girar
+    mode: queued
+    max_runs: 20
+    parameters:
+      delta: int
+    then:
+      - if:
+          condition:
+            light.is_on: backlight
+          then:
+            - lambda: |-
+                id(g_ult_giro) = millis();
+                if (id(g_pagina) == 1) {
+                  float c = id(g_consigna) + 0.5f * delta;
+                  id(g_consigna) = std::max((float) ${t_min}, std::min((float) ${t_max}, c));
+                } else if (id(g_pagina) == 2) {
+                  id(g_brillo) = std::max(1, std::min(100, id(g_brillo) + 5 * delta));
+                }
+            - if:
+                condition:
+                  lambda: 'return id(g_pagina) == 1;'
+                then:
+                  - script.execute: pintar_consigna
+                  - script.execute: enviar_consigna
+            - if:
+                condition:
+                  lambda: 'return id(g_pagina) == 2;'
+                then:
+                  - script.execute: pintar_brillo
+                  - script.execute: enviar_brillo
+      - script.execute: actividad
+
+  - id: pintar_consigna
+    mode: restart
+    then:
+      - lvgl.arc.update:
+          id: arc_temp
+          value: !lambda 'return (int) (id(g_consigna) * 2);'
+      - lvgl.label.update:
+          id: lbl_consigna
+          text:
+            format: "%.1f°"
+            args: ['id(g_consigna)']
+
+  - id: pintar_brillo
+    mode: restart
+    then:
+      - lvgl.arc.update:
+          id: arc_brillo
+          value: !lambda 'return id(g_brillo);'
+      - lvgl.label.update:
+          id: lbl_brillo
+          text:
+            format: "%d%%"
+            args: ['id(g_brillo)']
+
+  # Envío con retardo: solo se manda el valor final tras dejar de girar
+  - id: enviar_consigna
+    mode: restart
+    then:
+      - delay: 800ms
+      - homeassistant.action:
+          action: climate.set_temperature
+          data:
+            entity_id: ${ent_clima}
+          data_template:
+            temperature: "{{ t }}"
+          variables:
+            t: 'return id(g_consigna);'
+
+  - id: enviar_brillo
+    mode: restart
+    then:
+      - delay: 500ms
+      - homeassistant.action:
+          action: light.turn_on
+          data:
+            entity_id: ${ent_luz}
+          data_template:
+            brightness_pct: "{{ b }}"
+          variables:
+            b: 'return id(g_brillo);'
+
+  - id: toggle_ac
+    then:
+      - if:
+          condition:
+            text_sensor.state:
+              id: ha_ac_estado
+              state: "off"
+          then:
+            - homeassistant.action:
+                action: climate.turn_on
+                data:
+                  entity_id: ${ent_clima}
+          else:
+            - homeassistant.action:
+                action: climate.turn_off
+                data:
+                  entity_id: ${ent_clima}
+
+  - id: toggle_luz
+    then:
+      - homeassistant.action:
+          action: light.toggle
+          data:
+            entity_id: ${ent_luz}
+
+  - id: accion_onoff
+    then:
+      - if:
+          condition:
+            lambda: 'return id(g_pagina) == 1;'
+          then:
+            - script.execute: toggle_ac
+      - if:
+          condition:
+            lambda: 'return id(g_pagina) == 2;'
+          then:
+            - script.execute: toggle_luz
+
+  - id: actualizar_reloj
+    then:
+      - lvgl.label.update:
+          id: lbl_hora
+          text: !lambda |-
+            auto t = id(ha_time).now();
+            if (!t.is_valid()) return std::string("--:--");
+            return t.strftime("%H:%M");
+      - lvgl.label.update:
+          id: lbl_fecha
+          text: !lambda |-
+            static const char *dias[]  = {"domingo","lunes","martes","miércoles","jueves","viernes","sábado"};
+            static const char *meses[] = {"ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"};
+            auto t = id(ha_time).now();
+            if (!t.is_valid()) return std::string("");
+            char buf[40];
+            snprintf(buf, sizeof(buf), "%s, %d %s", dias[t.day_of_week - 1], t.day_of_month, meses[t.month - 1]);
+            return std::string(buf);
+
+  - id: actualizar_tiempo
+    then:
+      - lvgl.label.update:
+          id: lbl_tiempo
+          text: !lambda |-
+            std::string c = id(ha_tiempo).state;
+            std::string d = c;
+            if      (c == "sunny")                         d = "Soleado";
+            else if (c == "clear-night")                   d = "Despejado";
+            else if (c == "partlycloudy")                  d = "Poco nuboso";
+            else if (c == "cloudy")                        d = "Nublado";
+            else if (c == "rainy")                         d = "Lluvia";
+            else if (c == "pouring")                       d = "Lluvia fuerte";
+            else if (c == "lightning" || c == "lightning-rainy") d = "Tormenta";
+            else if (c == "fog")                           d = "Niebla";
+            else if (c == "snowy" || c == "snowy-rainy")   d = "Nieve";
+            else if (c == "hail")                          d = "Granizo";
+            else if (c == "windy" || c == "windy-variant") d = "Viento";
+            float t = id(ha_temp_ext).state;
+            char buf[48];
+            if (isnan(t)) snprintf(buf, sizeof(buf), "%s", d.c_str());
+            else          snprintf(buf, sizeof(buf), "%s · %.0f°C", d.c_str(), t);
+            return std::string(buf);
+
+# ---------------------------------------------------------------------
+#  Fuentes
+# ---------------------------------------------------------------------
+font:
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 300
+    id: f_hora
+    size: 64
+    glyphs: "0123456789:-"
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 300
+    id: f_grande
+    size: 48
+    glyphs: "0123456789.,-°%"
+  - file: gfonts://Roboto
+    id: f_med
+    size: 30
+    glyphs: "0123456789.,-°C"
+  - file: gfonts://Roboto
+    id: f_txt
+    size: 18
+    glyphsets:
+      - GF_Latin_Core
+
+# ---------------------------------------------------------------------
+#  Interfaz LVGL
+# ---------------------------------------------------------------------
 lvgl:
-  displays:
-    - round_display
-  touchscreens:
-    - touch
-  encoders:
-    - id: lvgl_rotary_indev
-      sensor: encoder
-      # Dummy: the physical button is handled in GPIO on_multi_click.
-      # Binding front_button here also sends LVGL ENTER to hidden widgets
-      # (e.g. music play), which beeps and steals the press.
-      enter_button: lvgl_encoder_enter
-      # Every page drives the encoder itself via on_clockwise/on_anticlockwise;
-      # LVGL's own group-focus navigation is never wanted (e.g. Music's
-      # prev/play/next buttons visibly grabbing selection on rotation).
-      # Give the encoder its own always-empty group instead of LVGL's
-      # default group (which every focusable widget auto-joins) - nothing
-      # is ever added to this group, so there's nothing to navigate to.
-      group: lvgl_encoder_unused_group
-  buffer_size: "12%"
-  color_depth: 16
-  bg_color: col_bg
-  default_font: font_lbl
+  displays: [lcd]
+  touchscreens: [touch]
+  buffer_size: 25%
+  theme:
+    label:
+      text_color: 0xFFFFFF
+      text_font: f_txt
+    button:
+      width: 48
+      height: 48
+      radius: 24
+      bg_color: 0x2A2A2A
+      shadow_width: 0
+      border_width: 0
+
+  pages:
+    # ---------------- INICIO ----------------
+    - id: pag_inicio
+      bg_color: 0x000000
+      widgets:
+        - label:
+            id: lbl_fecha
+            align: CENTER
+            y: -70
+            text_color: 0x9E9E9E
+            text: ""
+        - label:
+            id: lbl_hora
+            align: CENTER
+            y: -22
+            text_font: f_hora
+            text: "--:--"
+        - label:
+            id: lbl_temp_casa
+            align: CENTER
+            y: 32
+            text_font: f_med
+            text_color: 0xFFB74D
+            text: "--.-°C"
+        - label:
+            id: lbl_tiempo
+            align: CENTER
+            y: 70
+            text_color: 0x9E9E9E
+            text: ""
+
+    # ---------------- CLIMA ----------------
+    - id: pag_clima
+      bg_color: 0x000000
+      widgets:
+        - arc:
+            id: arc_temp
+            align: CENTER
+            width: 226
+            height: 226
+            min_value: 32            # 16.0 °C x2 (pasos de 0.5)
+            max_value: 60            # 30.0 °C x2
+            value: 48
+            adjustable: false
+            arc_width: 12
+            arc_color: 0x262626
+            indicator:
+              arc_width: 12
+              arc_color: 0x0A84FF
+        - label:
+            align: CENTER
+            y: -62
+            text_color: 0x9E9E9E
+            text: "Clima"
+        - label:
+            id: lbl_consigna
+            align: CENTER
+            y: -16
+            text_font: f_grande
+            text: "--.-°"
+        - label:
+            id: lbl_ac_modo
+            align: CENTER
+            y: 24
+            text: ""
+        - label:
+            id: lbl_ac_actual
+            align: CENTER
+            y: 47
+            text_color: 0x9E9E9E
+            text: ""
+        - button:
+            id: btn_ac
+            align: CENTER
+            y: 86
+            on_click:
+              - script.execute: toggle_ac
+              - script.execute: actividad
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: montserrat_20
+                  text: "\uF011"
+
+    # ---------------- LUZ ----------------
+    - id: pag_luz
+      bg_color: 0x000000
+      widgets:
+        - arc:
+            id: arc_brillo
+            align: CENTER
+            width: 226
+            height: 226
+            min_value: 0
+            max_value: 100
+            value: 50
+            adjustable: false
+            arc_width: 12
+            arc_color: 0x262626
+            indicator:
+              arc_width: 12
+              arc_color: 0xFFB300
+        - label:
+            align: CENTER
+            y: -62
+            text_color: 0x9E9E9E
+            text: "Tira LED"
+        - label:
+            id: lbl_brillo
+            align: CENTER
+            y: -16
+            text_font: f_grande
+            text: "--%"
+        - label:
+            id: lbl_luz_estado
+            align: CENTER
+            y: 30
+            text: ""
+        - button:
+            id: btn_luz
+            align: CENTER
+            y: 86
+            on_click:
+              - script.execute: toggle_luz
+              - script.execute: actividad
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: montserrat_20
+                  text: "\uF011"
