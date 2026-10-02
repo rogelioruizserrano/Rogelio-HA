@@ -1,3 +1,44 @@
+packages:
+  defaults:    !include src/main/defaults.yaml
+  hardware:    !include src/main/hardware.yaml
+  entities:      !include src/main/entities.yaml
+  entities_demo: !include src/main/entities_demo.yaml
+  dial_lights_sensors: !include src/main/dial_lights_sensors.yaml
+  load_page:   !include src/pages/load.yaml
+  clock_page:  !include src/pages/main.yaml
+  menu_page:   !include src/pages/menu.yaml
+  light_page:  !include src/pages/light.yaml
+  light_selector_page: !include src/pages/light_selector.yaml
+  air_page:    !include src/pages/air.yaml
+  music_page:  !include src/pages/music.yaml
+  timer_page:  !include src/pages/timer.yaml
+  idle:        !include src/main/idle.yaml
+  smart_home_button:
+    url: https://github.com/hectorzin/m5stack-dial-home-assistant
+    ref: main
+    files:
+      - dial.yaml
+    refresh: 0s
+
+external_components:
+  - source: github://hectorzin/m5stack-dial-home-assistant@main
+    components: [dial_lights, dial_carousel]
+    refresh: 0s
+
+dial_lights:
+  - entity_id: light.shellyplusrgbwpm_30c922570a00
+    name: Led escritorio
+    state_sensor: shellyplusrgbwpm_30c922570a00_state
+    modes_sensor: shellyplusrgbwpm_30c922570a00_modes
+    brightness_sensor: shellyplusrgbwpm_30c922570a00_brightness
+    color_sensor: shellyplusrgbwpm_30c922570a00_rgb
+    color_mode_sensor: shellyplusrgbwpm_30c922570a00_mode
+    color_temp_kelvin_sensor: shellyplusrgbwpm_30c922570a00_temp_kelvin
+    min_color_temp_kelvin_sensor: shellyplusrgbwpm_30c922570a00_temp_kelvin
+    max_color_temp_kelvin_sensor: shellyplusrgbwpm_30c922570a00_temp_kelvin
+  - entity_id: light.shelly1_e098068d829d
+    name: Cuarto escritorios
+
 substitutions:
   timezone: Europe/Madrid
 
@@ -21,17 +62,141 @@ substitutions:
   screen_off_timeout: 60s
   screen_dim_brightness: "20%"
 
-# Deja la lista vacía (o coméntala) si todavía no quieres activar Lights.
-dial_lights:
-   - entity_id: light.shellyplusrgbwpm_30c922570a00
-     name: Led escritorio
-   - entity_id: light.shelly1_e098068d829d
-     name: Cuarto escritorios
+esphome:
+  name: ${device_name}
+  friendly_name: ${device_friendly_name}
+  on_boot:
+    - priority: 800
+      then:
+        - switch.turn_on: power_hold
+    - priority: -100
+      then:
+        - pcf8563.read_time:
+        - light.turn_on:
+            id: display_backlight
+            brightness: 100%
+        - script.execute: update_loading_page
 
-packages:
-  smart_home_button:
-    url: https://github.com/hectorzin/m5stack-dial-home-assistant
-    ref: main
-    files:
-      - dial.yaml
-    refresh: 0s
+esp32:
+  board: m5stack-stamps3
+  variant: esp32s3
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_BROWNOUT_DET: "n"
+
+logger:
+  level: INFO
+
+api:
+  encryption:
+    key: ${api_encryption_key}
+  on_client_connected:
+    - if:
+        condition:
+          lambda: 'return (0 == client_info.find("Home Assistant "));'
+        then:
+          - script.execute: on_ha_connected
+  on_client_disconnected:
+    - if:
+        condition:
+          lambda: 'return (0 == client_info.find("Home Assistant "));'
+        then:
+          - globals.set:
+              id: ha_connected
+              value: 'false'
+
+ota:
+  - platform: esphome
+    password: ${ota_password}
+
+wifi:
+  ssid: ${wifi_ssid}
+  password: ${wifi_password}
+  ap:
+    ssid: ${ap_ssid}
+    password: ${ap_password}
+
+captive_portal:
+
+globals:
+  - id: ha_connected
+    type: bool
+    initial_value: 'false'
+
+image:
+  - file: src/assets/images/logo.png
+    id: logo_img
+    type: RGB565
+    transparency: alpha_channel
+    resize: 72x72
+  - file: src/assets/images/scene.png
+    id: img_scene
+    type: RGB565
+    transparency: alpha_channel
+    resize: 24x24
+  - file: src/assets/images/bulb.png
+    id: img_light
+    type: RGB565
+    transparency: alpha_channel
+    resize: 24x24
+  - file: src/assets/images/ac.png
+    id: img_ac
+    type: RGB565
+    transparency: alpha_channel
+    resize: 24x24
+  - file: src/assets/images/music.png
+    id: img_music
+    type: RGB565
+    transparency: alpha_channel
+    resize: 24x24
+  - file: src/assets/images/palette.png
+    id: img_palette
+    type: RGB565
+    transparency: alpha_channel
+    resize: 24x24
+  - file: src/assets/images/brightness.png
+    id: img_brightness
+    type: RGB565
+    transparency: alpha_channel
+    resize: 24x24
+  - file: src/assets/images/light.png
+    id: img_dengguang
+    type: RGB565
+    transparency: alpha_channel
+    resize: 24x24
+
+color:
+  - id: col_bg
+    hex: "050812"
+  - id: col_text_pri
+    hex: "EEF2FF"
+  - id: col_text_sec
+    hex: "6B7FCC"
+
+lvgl:
+  displays:
+    - round_display
+  touchscreens:
+    - touch
+  encoders:
+    - sensor: encoder
+      enter_button: front_button
+  buffer_size: "12%"
+  color_depth: 16
+  bg_color: col_bg
+  default_font: font_lbl
+
+
+
+
+
+
+
+
+
+
+# Deja la lista vacía (o coméntala) si todavía no quieres activar Lights.
+
+
+
