@@ -23,10 +23,10 @@ substitutions:
 
 # Deja la lista vacía (o coméntala) si todavía no quieres activar Lights.
 dial_lights:
-   - entity_id: light.ventilador_salita
-     name: Luz ventilador
-   - entity_id: light.yeelight_lamparita_salita
-     name: Lamparita
+   - entity_id: light.shellyplusrgbwpm_30c922570a00
+     name: Led escritorio
+   - entity_id: light.shelly1_e098068d829d
+     name: Cuarto escritorios
 
 packages:
   smart_home_button:
