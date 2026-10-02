@@ -1,70 +1,61 @@
 packages:
   defaults:    !include src/main/defaults.yaml
   hardware:    !include src/main/hardware.yaml
-  entities:      !include src/main/entities.yaml
-  entities_demo: !include src/main/entities_demo.yaml
-  dial_lights_sensors: !include src/main/dial_lights_sensors.yaml
   load_page:   !include src/pages/load.yaml
   clock_page:  !include src/pages/main.yaml
   menu_page:   !include src/pages/menu.yaml
   light_page:  !include src/pages/light.yaml
   light_selector_page: !include src/pages/light_selector.yaml
+  entity_selector_page: !include src/pages/entity_selector.yaml
   air_page:    !include src/pages/air.yaml
   music_page:  !include src/pages/music.yaml
-  timer_page:  !include src/pages/timer.yaml
+  cover_page:  !include src/pages/cover.yaml
+  switch_page: !include src/pages/switch.yaml
+  scene_page:  !include src/pages/scene.yaml
+  temp_page:   !include src/pages/temp.yaml
+  alarm_page:  !include src/pages/alarm.yaml
   idle:        !include src/main/idle.yaml
-  smart_home_button:
-    url: https://github.com/hectorzin/m5stack-dial-home-assistant
-    ref: main
-    files:
-      - dial.yaml
-    refresh: 0s
 
 external_components:
-  - source: github://hectorzin/m5stack-dial-home-assistant@main
-    components: [dial_lights, dial_carousel]
+  # GitHub, not type: local — ESPHome resolves local paths against the
+  # user's /config/esphome folder, not this package.
+  - source: github://Glooob-domo/m5stack-dial-home-assistant@main
+    components: [dial_lights, dial_ha_list, dial_climates, dial_media_players, dial_covers, dial_garages, dial_switches, dial_scenes, dial_temperatures, dial_carousel, dial_i18n, generic_image, media_source, sendspin]
     refresh: 0s
 
-dial_lights:
-  - entity_id: light.shellyplusrgbwpm_30c922570a00
-    name: Led escritorio
-    state_sensor: shellyplusrgbwpm_30c922570a00_state
-    modes_sensor: shellyplusrgbwpm_30c922570a00_modes
-    brightness_sensor: shellyplusrgbwpm_30c922570a00_brightness
-    color_sensor: shellyplusrgbwpm_30c922570a00_rgb
-    color_mode_sensor: shellyplusrgbwpm_30c922570a00_mode
-    color_temp_kelvin_sensor: shellyplusrgbwpm_30c922570a00_temp_kelvin
-    min_color_temp_kelvin_sensor: shellyplusrgbwpm_30c922570a00_temp_kelvin
-    max_color_temp_kelvin_sensor: shellyplusrgbwpm_30c922570a00_temp_kelvin
-  - entity_id: light.shelly1_e098068d829d
-    name: Cuarto escritorios
-
 substitutions:
-  timezone: Europe/Madrid
-
-  api_encryption_key: !secret dial_api_key
-  wifi_ssid: !secret wifi_ssid
-  wifi_password: !secret wifi_password
-
-  # Opcionales: si los dejas tal cual (con estos valores de ejemplo),
-  # esa página del menú queda automáticamente oculta.
-  weather_entity: weather.pirateweather
-  aqi_entity: sensor.multisensor_salita_co2_medidor_salita
-  climate_entity: climate.casa
-  timer_entity: timer.your_timer
-
-  # Reutilizamos tu TV como "Music" (play/pausa, volumen y metadatos;
-  # no hay selector de fuentes/apps en este firmware).
-  music_player_entity: media_player.tv_salita_lg
-
-  screen_return_timeout: 30s
-  screen_dim_timeout: 15s
-  screen_off_timeout: 60s
+  # Remote packages cannot resolve !secret themselves. Set these from the
+  # consumer configuration (usually with !secret values in that local file).
+  device_name: m5stack-dialv1
+  device_friendly_name: M5Stack Dial
+  wifi_ssid: YOUR_WIFI_SSID
+  wifi_password: YOUR_WIFI_PASSWORD
+  ap_ssid: Dial Fallback Hotspot
+  ap_password: change-me-fallback-password
+  # Public dummy key for validation only. Always override before flashing.
+  api_encryption_key: MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=
+  ota_password: change-me-ota-password
+  screen_dim_timeout: 45s
+  screen_return_timeout: 5min
+  screen_off_timeout: 30min
   screen_dim_brightness: "20%"
+  encoder_resolution: "1"
+  # Amount one encoder step changes on pages that edit an entity value.
+  cover_position_step: "5"      # % per step, 1-100
+  light_brightness_step: "1"    # % per step, 1-100
+  climate_temperature_step: "2" # 0.5C units per step: 2 = 1C, 1 = 0.5C
+  music_volume_step: "10"       # % per step, 1-100
 
 esphome:
   name: ${device_name}
   friendly_name: ${device_friendly_name}
+  min_version: 2026.7.0
+  # interval: (PollingComponent/scheduler) never fired on this device -
+  # confirmed by diagnostic logging on every page that used it, while
+  # on_loop (runs every main-loop iteration, no scheduler involved) fired
+  # reliably. Every periodic tick in this project now runs from on_loop
+  # blocks (one per page, each with its own millis() throttle) instead of
+  # interval:, merged here from src/main/idle.yaml and src/pages/*.yaml.
   on_boot:
     - priority: 800
       then:
@@ -76,6 +67,14 @@ esphome:
             id: display_backlight
             brightness: 100%
         - script.execute: update_loading_page
+        - lambda: |-
+            // Every page drives the encoder itself via on_clockwise/
+            // on_anticlockwise; LVGL's own group-focus navigation is never
+            // wanted. Detach it globally instead of excluding widgets one
+            // by one (see Music's prev/play/next buttons, which stayed
+            // focusable and both visibly grabbed selection on rotation and
+            // ate the front-button ENTER press meant for on_multi_click).
+            lv_indev_set_group(id(lvgl_rotary_indev).get_drv(), nullptr);
 
 esp32:
   board: m5stack-stamps3
@@ -90,7 +89,7 @@ logger:
 
 api:
   encryption:
-    key: ${api_encryption_key}
+    key: !secret dial_api_key
   on_client_connected:
     - if:
         condition:
@@ -119,52 +118,21 @@ wifi:
 
 captive_portal:
 
+dial_i18n:
+  language: ${ui_language}
+
 globals:
   - id: ha_connected
     type: bool
     initial_value: 'false'
 
 image:
-  - file: src/assets/images/logo.png
+  - platform: file
+    file: ${asset_url}src/assets/images/logo.png
     id: logo_img
     type: RGB565
     transparency: alpha_channel
     resize: 72x72
-  - file: src/assets/images/scene.png
-    id: img_scene
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
-  - file: src/assets/images/bulb.png
-    id: img_light
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
-  - file: src/assets/images/ac.png
-    id: img_ac
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
-  - file: src/assets/images/music.png
-    id: img_music
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
-  - file: src/assets/images/palette.png
-    id: img_palette
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
-  - file: src/assets/images/brightness.png
-    id: img_brightness
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
-  - file: src/assets/images/light.png
-    id: img_dengguang
-    type: RGB565
-    transparency: alpha_channel
-    resize: 24x24
 
 color:
   - id: col_bg
@@ -180,23 +148,20 @@ lvgl:
   touchscreens:
     - touch
   encoders:
-    - sensor: encoder
-      enter_button: front_button
+    - id: lvgl_rotary_indev
+      sensor: encoder
+      # Dummy: the physical button is handled in GPIO on_multi_click.
+      # Binding front_button here also sends LVGL ENTER to hidden widgets
+      # (e.g. music play), which beeps and steals the press.
+      enter_button: lvgl_encoder_enter
+      # Every page drives the encoder itself via on_clockwise/on_anticlockwise;
+      # LVGL's own group-focus navigation is never wanted (e.g. Music's
+      # prev/play/next buttons visibly grabbing selection on rotation).
+      # Give the encoder its own always-empty group instead of LVGL's
+      # default group (which every focusable widget auto-joins) - nothing
+      # is ever added to this group, so there's nothing to navigate to.
+      group: lvgl_encoder_unused_group
   buffer_size: "12%"
   color_depth: 16
   bg_color: col_bg
   default_font: font_lbl
-
-
-
-
-
-
-
-
-
-
-# Deja la lista vacía (o coméntala) si todavía no quieres activar Lights.
-
-
-
