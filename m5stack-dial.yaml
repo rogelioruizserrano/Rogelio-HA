@@ -24,7 +24,7 @@ substitutions:
   t_min: "16"
   t_max: "30"
   brillo_activo: "100%"
-  brillo_reposo: "12%"
+  brillo_reposo: "20%"
   t_reposo: "60000"    # ms
 
 esphome:
