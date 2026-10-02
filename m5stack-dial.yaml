@@ -1,12 +1,13 @@
 # =====================================================================
 #  M5Stack Dial (K130) - ESPHome + LVGL - UI minimalista
 #  Página 0: hora / fecha / temperatura casa / tiempo
-#  Página 1: climatización (consigna + on/off)
-#  Página 2: iluminación (brillo + on/off)
+#  Página 1: climatización (consigna + on/off + consumo W)
+#  Página 2: iluminación (brillo conjunto RGBW + on/off)
+#            tocar el centro -> selector de color
 #
 #  Controles:
 #   - Girar dial ............ ajusta consigna (pág. 1) o brillo (pág. 2)
-#   - Pulsación corta ....... página siguiente
+#   - Pulsación corta ....... página siguiente (en selector: volver sin cambiar)
 #   - Pulsación larga ....... on/off de la entidad de la página
 #   - Toque en botón ⏻ ...... on/off
 #   - 60 s sin uso .......... apaga pantalla y vuelve a inicio
@@ -18,7 +19,8 @@ substitutions:
   ent_clima: climate.casa
   ent_luz: light.shellyplusrgbwpm_30c922570a00
   ent_tiempo: weather.pirateweather
-  ent_temp_casa: sensor.temperatura_media_en_casa   # <-- AJUSTAR (ver nota)
+  ent_temp_casa: sensor.temperatura_media_casa   # <-- AJUSTAR (ver nota)
+  ent_ac_potencia: sensor.aire_acondicionado_power
   t_min: "16"
   t_max: "30"
 
@@ -33,6 +35,8 @@ esphome:
       then:
         - lambda: 'id(g_ult_act) = millis();'
         - script.execute: actualizar_reloj
+        - script.execute: pintar_brillo
+        - script.execute: pintar_muestra
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -46,6 +50,7 @@ logger:
 api:
   encryption:
     key: !secret dial_api_key
+
 ota:
   - platform: esphome
     encryption:
@@ -55,6 +60,8 @@ wifi:
   password: !secret wifi_password
   ap:
     password: !secret ap_password
+
+captive_portal:
 
 # ---------------------------------------------------------------------
 #  Variables internas
@@ -66,9 +73,27 @@ globals:
   - id: g_consigna
     type: float
     initial_value: '24.0'
-  - id: g_brillo
+  - id: g_brillo            # brillo conjunto RGBW (%), se guarda en flash
     type: int
+    restore_value: true
     initial_value: '50'
+  # Color base de la tira a intensidad 100% (se escala con g_brillo)
+  - id: g_r
+    type: int
+    restore_value: true
+    initial_value: '0'
+  - id: g_g
+    type: int
+    restore_value: true
+    initial_value: '0'
+  - id: g_b
+    type: int
+    restore_value: true
+    initial_value: '0'
+  - id: g_w
+    type: int
+    restore_value: true
+    initial_value: '255'
   - id: g_ult_giro          # evita que HA pise el valor mientras giras
     type: uint32_t
     initial_value: '0'
@@ -81,7 +106,9 @@ globals:
 # ---------------------------------------------------------------------
 output:
   - platform: gpio
-    pin: GPIO46
+    pin:
+      number: GPIO46
+      ignore_strapping_warning: true
     id: power_hold
   - platform: ledc
     pin: GPIO9
@@ -105,7 +132,7 @@ spi:
   clk_pin: GPIO6
 
 display:
-  - platform: ili9xxx
+  - platform: mipi_spi
     id: lcd
     model: GC9A01A
     cs_pin: GPIO7
@@ -237,12 +264,17 @@ sensor:
     entity_id: ${ent_luz}
     attribute: brightness
     on_value:
-      - if:
-          condition:
-            lambda: 'return !isnan(x) && (millis() - id(g_ult_giro) > 3000);'
-          then:
-            - lambda: 'id(g_brillo) = std::max(1, (int) roundf(x * 100.0f / 255.0f));'
-            - script.execute: pintar_brillo
+      - script.execute: sincronizar_luz
+
+  - platform: homeassistant
+    id: ha_ac_potencia
+    entity_id: ${ent_ac_potencia}
+    on_value:
+      - lvgl.label.update:
+          id: lbl_ac_potencia
+          text:
+            format: "%.0f W"
+            args: ['x']
 
 text_sensor:
   - platform: homeassistant
@@ -268,6 +300,13 @@ text_sensor:
       - lvgl.widget.update:
           id: btn_ac
           bg_color: !lambda 'return x == "off" ? lv_color_hex(0x2A2A2A) : lv_color_hex(0x0A84FF);'
+
+  - platform: homeassistant
+    id: ha_luz_rgbw
+    entity_id: ${ent_luz}
+    attribute: rgbw_color
+    on_value:
+      - script.execute: sincronizar_luz
 
   - platform: homeassistant
     id: ha_luz_estado
@@ -312,7 +351,9 @@ script:
 
   - id: siguiente_pagina
     then:
-      - lambda: 'id(g_pagina) = (id(g_pagina) + 1) % 3;'
+      - lambda: |-
+          if (id(g_pagina) == 3) id(g_pagina) = 2;          // desde selector de color -> volver a luz
+          else id(g_pagina) = (id(g_pagina) + 1) % 3;
       - if:
           condition:
             lambda: 'return id(g_pagina) == 0;'
@@ -358,7 +399,7 @@ script:
                   lambda: 'return id(g_pagina) == 2;'
                 then:
                   - script.execute: pintar_brillo
-                  - script.execute: enviar_brillo
+                  - script.execute: enviar_luz
       - script.execute: actividad
 
   - id: pintar_consigna
@@ -397,9 +438,11 @@ script:
           data_template:
             temperature: "{{ t }}"
           variables:
-            t: 'return id(g_consigna);'
+            t: !lambda 'return id(g_consigna);'
 
-  - id: enviar_brillo
+  # Brillo conjunto: se escalan los 4 canales (R,G,B,W) y brightness al 100%,
+  # así el regulador actúa igual sobre RGB y sobre el canal blanco.
+  - id: enviar_luz
     mode: restart
     then:
       - delay: 500ms
@@ -407,10 +450,80 @@ script:
           action: light.turn_on
           data:
             entity_id: ${ent_luz}
+            brightness_pct: "100"
           data_template:
-            brightness_pct: "{{ b }}"
+            rgbw_color: "[{{ cr }}, {{ cg }}, {{ cb }}, {{ cw }}]"
           variables:
-            b: 'return id(g_brillo);'
+            cr: !lambda 'return (int) roundf(id(g_r) * id(g_brillo) / 100.0f);'
+            cg: !lambda 'return (int) roundf(id(g_g) * id(g_brillo) / 100.0f);'
+            cb: !lambda 'return (int) roundf(id(g_b) * id(g_brillo) / 100.0f);'
+            cw: !lambda 'return (int) roundf(id(g_w) * id(g_brillo) / 100.0f);'
+
+  - id: abrir_color
+    then:
+      - lambda: 'id(g_pagina) = 3;'
+      - lvgl.page.show: pag_color
+      - script.execute: actividad
+
+  - id: elegir_color
+    parameters:
+      r: int
+      g: int
+      b: int
+      w: int
+    then:
+      - lambda: |-
+          id(g_r) = r; id(g_g) = g; id(g_b) = b; id(g_w) = w;
+          id(g_pagina) = 2;
+          id(g_ult_giro) = millis();
+      - script.execute: pintar_muestra
+      - script.execute: enviar_luz
+      - lvgl.page.show: pag_luz
+      - script.execute: actividad
+
+  # Lee rgbw_color + brightness de HA y los convierte al modelo del Dial:
+  #   color efectivo  e_i = c_i * brightness/255
+  #   brillo (%)      = max(e_i) / 255 * 100
+  #   color base      = e_i normalizado a 255 en el canal mayor
+  # Ignora actualizaciones durante 3 s tras tocar el Dial (evita rebotes).
+  - id: sincronizar_luz
+    mode: restart
+    then:
+      - delay: 300ms            # agrupa los dos atributos que llegan casi juntos
+      - if:
+          condition:
+            lambda: |-
+              if (millis() - id(g_ult_giro) < 3000) return false;
+              std::string s = id(ha_luz_rgbw).state;
+              int v[4]; int n = 0; int cur = -1;
+              for (char ch : s) {
+                if (ch >= '0' && ch <= '9') { cur = (cur < 0 ? 0 : cur * 10) + (ch - '0'); }
+                else if (cur >= 0) { if (n < 4) v[n++] = cur; cur = -1; }
+              }
+              if (cur >= 0 && n < 4) v[n++] = cur;
+              if (n != 4) return false;                       // luz apagada o atributo vacío
+              float bri = id(ha_luz_brillo).state;
+              if (isnan(bri)) bri = 255.0f;
+              float e[4], mx = 0;
+              for (int i = 0; i < 4; i++) { e[i] = v[i] * bri / 255.0f; mx = std::max(mx, e[i]); }
+              if (mx < 1.0f) return false;
+              id(g_brillo) = std::max(1, std::min(100, (int) roundf(mx * 100.0f / 255.0f)));
+              id(g_r) = (int) roundf(e[0] * 255.0f / mx);
+              id(g_g) = (int) roundf(e[1] * 255.0f / mx);
+              id(g_b) = (int) roundf(e[2] * 255.0f / mx);
+              id(g_w) = (int) roundf(e[3] * 255.0f / mx);
+              return true;
+          then:
+            - script.execute: pintar_brillo
+            - script.execute: pintar_muestra
+
+  - id: pintar_muestra
+    then:
+      - lvgl.widget.update:
+          id: muestra_color
+          bg_color: !lambda |-
+            if (id(g_r) == 0 && id(g_g) == 0 && id(g_b) == 0) return lv_color_hex(0xFFF1D6);
+            return lv_color_make(id(g_r), id(g_g), id(g_b));
 
   - id: toggle_ac
     then:
@@ -518,8 +631,7 @@ font:
   - file: gfonts://Roboto
     id: f_txt
     size: 18
-    glyphsets:
-      - GF_Latin_Core
+    glyphs: " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZáéíóúüñÁÉÍÓÚÜÑ0123456789.,:;-_·°%/()'!?"
 
 # ---------------------------------------------------------------------
 #  Interfaz LVGL
@@ -590,6 +702,12 @@ lvgl:
               arc_width: 12
               arc_color: 0x0A84FF
         - label:
+            id: lbl_ac_potencia
+            align: CENTER
+            y: -84
+            text_color: 0xFFD54F
+            text: "-- W"
+        - label:
             align: CENTER
             y: -62
             text_color: 0x9E9E9E
@@ -656,8 +774,27 @@ lvgl:
         - label:
             id: lbl_luz_estado
             align: CENTER
-            y: 30
+            y: 26
             text: ""
+        - obj:                       # muestra del color actual
+            id: muestra_color
+            align: CENTER
+            y: 50
+            width: 16
+            height: 16
+            radius: 8
+            border_width: 0
+            bg_color: 0xFFF1D6
+            clickable: false
+        - obj:                       # zona táctil central -> selector de color
+            align: CENTER
+            y: -5
+            width: 160
+            height: 110
+            bg_opa: TRANSP
+            border_width: 0
+            on_click:
+              - script.execute: abrir_color
         - button:
             id: btn_luz
             align: CENTER
@@ -670,3 +807,80 @@ lvgl:
                   align: CENTER
                   text_font: montserrat_20
                   text: "\uF011"
+
+    # ---------------- SELECTOR DE COLOR ----------------
+    # Fuera del ciclo de páginas: se abre tocando la página de luz.
+    # Pulsación corta del dial = volver sin cambiar.
+    - id: pag_color
+      bg_color: 0x000000
+      skip: true
+      widgets:
+        - button:
+            align: CENTER
+            width: 76
+            height: 76
+            radius: 38
+            bg_color: 0xFFF1D6
+            on_click:
+              - script.execute: {id: elegir_color, r: 0, g: 0, b: 0, w: 255}
+            widgets:
+              - label:
+                  align: CENTER
+                  text_color: 0x000000
+                  text: "Blanco"
+        - button:
+            align: CENTER
+            x: 0
+            y: -82
+            bg_color: 0xFF0000
+            on_click:
+              - script.execute: {id: elegir_color, r: 255, g: 0, b: 0, w: 0}
+        - button:
+            align: CENTER
+            x: 58
+            y: -58
+            bg_color: 0xFF6400
+            on_click:
+              - script.execute: {id: elegir_color, r: 255, g: 100, b: 0, w: 0}
+        - button:
+            align: CENTER
+            x: 82
+            y: 0
+            bg_color: 0xFFC800
+            on_click:
+              - script.execute: {id: elegir_color, r: 255, g: 200, b: 0, w: 0}
+        - button:
+            align: CENTER
+            x: 58
+            y: 58
+            bg_color: 0x00FF00
+            on_click:
+              - script.execute: {id: elegir_color, r: 0, g: 255, b: 0, w: 0}
+        - button:
+            align: CENTER
+            x: 0
+            y: 82
+            bg_color: 0x00FFC8
+            on_click:
+              - script.execute: {id: elegir_color, r: 0, g: 255, b: 200, w: 0}
+        - button:
+            align: CENTER
+            x: -58
+            y: 58
+            bg_color: 0x0000FF
+            on_click:
+              - script.execute: {id: elegir_color, r: 0, g: 0, b: 255, w: 0}
+        - button:
+            align: CENTER
+            x: -82
+            y: 0
+            bg_color: 0x9600FF
+            on_click:
+              - script.execute: {id: elegir_color, r: 150, g: 0, b: 255, w: 0}
+        - button:
+            align: CENTER
+            x: -58
+            y: -58
+            bg_color: 0xFF0078
+            on_click:
+              - script.execute: {id: elegir_color, r: 255, g: 0, b: 120, w: 0}
