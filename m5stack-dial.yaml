@@ -19,7 +19,7 @@ substitutions:
   ent_clima: climate.casa
   ent_luz: light.shellyplusrgbwpm_30c922570a00
   ent_tiempo: weather.pirateweather
-  ent_temp_casa: sensor.temperatura_media_casa   # <-- AJUSTAR (ver nota)
+  ent_temp_casa: sensor.temperatura_media_en_casa   # <-- AJUSTAR (ver nota)
   ent_ac_potencia: sensor.aire_acondicionado_power
   t_min: "16"
   t_max: "30"
