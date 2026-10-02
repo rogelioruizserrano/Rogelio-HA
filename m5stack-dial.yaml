@@ -28,12 +28,10 @@ substitutions:
   # consumer configuration (usually with !secret values in that local file).
   device_name: m5stack-dialv1
   device_friendly_name: M5Stack Dial
-  wifi_ssid: YOUR_WIFI_SSID
-  wifi_password: YOUR_WIFI_PASSWORD
+  wifi_ssid: !secret wifi_ssid
+  wifi_password: !secret wifi_password
   ap_ssid: Dial Fallback Hotspot
   ap_password: change-me-fallback-password
-  # Public dummy key for validation only. Always override before flashing.
-  api_encryption_key: MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=
   ota_password: change-me-ota-password
   screen_dim_timeout: 45s
   screen_return_timeout: 5min
