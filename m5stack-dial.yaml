@@ -62,7 +62,7 @@ api:
         titulo: string
         mensaje: string
         segundos: int
-        nivel: string          # info | aviso | alerta
+        nivel: string          # info | ok | aviso | alerta
       then:
         - script.execute:
             id: mostrar_aviso
@@ -129,6 +129,12 @@ globals:
   - id: g_msg_visible       # true = hay un mensaje en pantalla
     type: bool
     initial_value: 'false'
+  - id: g_msg_dur           # duración del mensaje actual (ms)
+    type: uint32_t
+    initial_value: '5000'
+  - id: g_msg_fin           # millis() en que se cierra el mensaje
+    type: uint32_t
+    initial_value: '0'
 
 # ---------------------------------------------------------------------
 #  Hardware
@@ -394,25 +400,49 @@ script:
       segundos: int
       nivel: string
     then:
-      - lambda: 'id(g_msg_visible) = true;'
+      - lambda: |-
+          id(g_msg_visible) = true;
+          id(g_msg_dur) = std::max(2, std::min(600, (int) segundos)) * 1000UL;
+          id(g_msg_fin) = millis() + id(g_msg_dur);
       - lvgl.label.update:
           id: lbl_msg_titulo
           text: !lambda 'return titulo;'
       - lvgl.label.update:
           id: lbl_msg_texto
           text: !lambda 'return mensaje;'
+      # Icono MDI según nivel
+      - lvgl.label.update:
+          id: lbl_msg_icono
+          text: !lambda |-
+            if (nivel == "alerta") return std::string("\U000F0028");   // alert-octagon
+            if (nivel == "aviso")  return std::string("\U000F0026");   // alert
+            if (nivel == "ok")     return std::string("\U000F05E0");   // check-circle
+            return std::string("\U000F02FC");                         // information
+          text_color: !lambda |-
+            if (nivel == "alerta") return lv_color_hex(0xFF453A);
+            if (nivel == "aviso")  return lv_color_hex(0xFFB300);
+            if (nivel == "ok")     return lv_color_hex(0x30D158);
+            return lv_color_hex(0x40A9FF);
+      # Fondo teñido del color del nivel
       - lvgl.widget.update:
           id: msg_panel
-          border_color: !lambda |-
-            if (nivel == "alerta") return lv_color_hex(0xFF3B30);
-            if (nivel == "aviso")  return lv_color_hex(0xFFB300);
-            return lv_color_hex(0x0A84FF);
-      - lvgl.label.update:
-          id: lbl_msg_titulo
-          text_color: !lambda |-
-            if (nivel == "alerta") return lv_color_hex(0xFF3B30);
-            if (nivel == "aviso")  return lv_color_hex(0xFFB300);
-            return lv_color_hex(0x64B5F6);
+          bg_color: !lambda |-
+            if (nivel == "alerta") return lv_color_hex(0x3A0806);
+            if (nivel == "aviso")  return lv_color_hex(0x332200);
+            if (nivel == "ok")     return lv_color_hex(0x062A12);
+            return lv_color_hex(0x061E38);
+      # Anillo de cuenta atrás
+      - lvgl.arc.update:
+          id: arc_msg
+          value: 1000
+      - lvgl.widget.update:
+          id: arc_msg
+          indicator:
+            arc_color: !lambda |-
+              if (nivel == "alerta") return lv_color_hex(0xFF453A);
+              if (nivel == "aviso")  return lv_color_hex(0xFFB300);
+              if (nivel == "ok")     return lv_color_hex(0x30D158);
+              return lv_color_hex(0x40A9FF);
       - lvgl.widget.show: msg_panel
       - script.execute: actividad          # despierta la pantalla si estaba atenuada
       - if:
@@ -422,7 +452,19 @@ script:
             - rtttl.play: "alerta:d=16,o=6,b=180:a,p,a,p,a"
           else:
             - rtttl.play: "aviso:d=16,o=6,b=200:e,g"
-      - delay: !lambda 'return std::max(2, std::min(600, (int) segundos)) * 1000;'
+      # El anillo se vacía hasta cerrar el mensaje
+      - while:
+          condition:
+            lambda: 'return (int32_t) (id(g_msg_fin) - millis()) > 0;'
+          then:
+            - lvgl.arc.update:
+                id: arc_msg
+                value: !lambda |-
+                  int32_t rest = (int32_t) (id(g_msg_fin) - millis());
+                  if (rest < 0) rest = 0;
+                  return (int) ((uint64_t) rest * 1000 / id(g_msg_dur));
+            - lambda: 'id(g_ult_act) = millis();'   # no atenuar con mensaje abierto
+            - delay: 150ms
       - script.execute: cerrar_aviso
 
   - id: cerrar_aviso
@@ -741,6 +783,29 @@ font:
     id: f_titulo
     size: 22
     glyphs: *glifos
+  # Notificaciones
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 700
+    id: f_msg_titulo
+    size: 30
+    glyphs: *glifos
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 400
+    id: f_msg_texto
+    size: 23
+    glyphs: *glifos
+  - file: "https://github.com/Templarian/MaterialDesign-Webfont/raw/master/fonts/materialdesignicons-webfont.ttf"
+    id: f_msg_icono
+    size: 54
+    glyphs:
+      - "\U000F02FC"   # information
+      - "\U000F05E0"   # check-circle
+      - "\U000F0026"   # alert
+      - "\U000F0028"   # alert-octagon
 
 # ---------------------------------------------------------------------
 #  Interfaz LVGL
@@ -771,30 +836,58 @@ lvgl:
           width: 240
           height: 240
           radius: 120
-          bg_color: 0x000000
-          bg_opa: 94%
-          border_width: 4
-          border_color: 0x0A84FF
+          bg_color: 0x061E38
+          bg_opa: COVER
+          border_width: 0
           pad_all: 0
           scrollable: false
           on_click:
             - script.execute: cerrar_aviso
             - script.execute: actividad
           widgets:
+            # Anillo de cuenta atrás por el borde
+            - arc:
+                id: arc_msg
+                align: CENTER
+                width: 236
+                height: 236
+                min_value: 0
+                max_value: 1000
+                value: 1000
+                rotation: 270            # empieza arriba
+                start_angle: 0
+                end_angle: 360
+                adjustable: false
+                clickable: false
+                arc_width: 6
+                arc_color: 0x1A1A1A
+                arc_rounded: true
+                indicator:
+                  arc_width: 6
+                  arc_color: 0x40A9FF
+                  arc_rounded: true
+            - label:
+                id: lbl_msg_icono
+                align: CENTER
+                y: -68
+                text_font: f_msg_icono
+                text: "\U000F02FC"
             - label:
                 id: lbl_msg_titulo
                 align: CENTER
-                y: -52
-                width: 180
-                text_font: f_titulo
+                y: -22
+                width: 196
+                text_font: f_msg_titulo
                 text_align: CENTER
                 long_mode: DOT
                 text: ""
             - label:
                 id: lbl_msg_texto
                 align: CENTER
-                y: 14
-                width: 176
+                y: 36
+                width: 184
+                text_font: f_msg_texto
+                text_color: 0xE6E6E6
                 text_align: CENTER
                 long_mode: WRAP
                 text: ""
