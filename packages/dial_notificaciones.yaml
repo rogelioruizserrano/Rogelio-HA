@@ -1,0 +1,634 @@
+# =====================================================================
+#  PAQUETE: dial_notificaciones.yaml
+#  Notificaciones de Home Assistant en el M5Stack Dial (ESPHome)
+#
+#  Copiar en /config/packages/dial_notificaciones.yaml
+#  (requiere en configuration.yaml:  homeassistant: packages: !include_dir_named packages)
+#
+#  Piezas:
+#    1. input_boolean.dial_notificaciones ....... interruptor maestro
+#    2. sensor.dial_registro_notificaciones ..... memoria de cooldowns y alertas activas
+#    3. script.dial_notificar ................... ÚNICO punto de envío al Dial
+#    4. automation "Dial · Mega-notificaciones" . disparadores + mensajes
+#
+#  Niveles: info (azul) · ok (verde) · aviso (ámbar) · alerta (rojo, 3 pitidos)
+#  Horario de silencio 23:00–07:30: solo pasan las marcadas con nocturna: true
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 1. Interruptor maestro
+# ---------------------------------------------------------------------
+input_boolean:
+  dial_notificaciones:
+    name: Dial · Notificaciones
+    icon: mdi:message-badge
+
+# ---------------------------------------------------------------------
+# 2. Registro (cooldown por clave + fin de la alerta en pantalla)
+#    Se actualiza con el evento dial_notificado que emite el script.
+#    Los atributos se restauran tras reiniciar HA.
+# ---------------------------------------------------------------------
+template:
+  - trigger:
+      - trigger: event
+        event_type: dial_notificado
+    sensor:
+      - name: Dial registro notificaciones
+        unique_id: dial_registro_notificaciones
+        icon: mdi:history
+        state: "{{ trigger.event.data.clave }}"
+        attributes:
+          ultimos: >
+            {% set prev = this.attributes.ultimos
+                 if this.attributes is defined and this.attributes.ultimos is defined
+                    and this.attributes.ultimos is mapping else {} %}
+            {{ dict(prev.items() | list + [(trigger.event.data.clave, trigger.event.data.ts | int)]) }}
+          alerta_hasta: >
+            {% if trigger.event.data.nivel == 'alerta' %}{{ trigger.event.data.hasta | int }}
+            {% else %}{{ (this.attributes.alerta_hasta if this.attributes is defined
+                          and this.attributes.alerta_hasta is defined else 0) | int(0) }}{% endif %}
+          ultimo_titulo: "{{ trigger.event.data.titulo }}"
+          ultimo_nivel: "{{ trigger.event.data.nivel }}"
+
+# ---------------------------------------------------------------------
+# 3. Script central
+# ---------------------------------------------------------------------
+script:
+  dial_notificar:
+    alias: Dial · Notificar
+    icon: mdi:message-alert
+    mode: queued
+    max: 15
+    fields:
+      titulo:
+        description: Título (≈12 caracteres)
+        required: true
+        selector: { text: }
+      mensaje:
+        description: Mensaje (≈45 caracteres)
+        required: true
+        selector: { text: }
+      nivel:
+        description: info | ok | aviso | alerta
+        default: info
+        selector:
+          select:
+            options: [info, ok, aviso, alerta]
+      segundos:
+        description: Duración en pantalla (0 = según nivel)
+        default: 0
+        selector: { number: { min: 0, max: 600, unit_of_measurement: s } }
+      clave:
+        description: Identificador para el cooldown (p. ej. A1)
+        selector: { text: }
+      cooldown:
+        description: Minutos mínimos entre dos avisos con la misma clave
+        default: 0
+        selector: { number: { min: 0, max: 1440, unit_of_measurement: min } }
+      nocturna:
+        description: Se muestra también en horario de silencio
+        default: false
+        selector: { boolean: }
+    sequence:
+      - variables:
+          # --- Configuración ---
+          silencio_ini: "23:00"
+          silencio_fin: "07:30"
+          duraciones: { info: 8, ok: 10, aviso: 20, alerta: 60 }
+          # --- Cálculos ---
+          niv: "{{ nivel if nivel in ['info', 'ok', 'aviso', 'alerta'] else 'info' }}"
+          dur: >
+            {% set s = segundos | default(0) | int(0) %}
+            {{ s if s > 0 else duraciones[niv] }}
+          key: "{{ (clave | default(titulo, true)) | slugify }}"
+          cd: "{{ cooldown | default(0) | int(0) }}"
+          ahora: "{{ now().timestamp() | int }}"
+          reg: "{{ state_attr('sensor.dial_registro_notificaciones', 'ultimos') or {} }}"
+          ultimo: "{{ reg.get(key, 0) | int(0) if reg is mapping else 0 }}"
+          alerta_hasta: "{{ state_attr('sensor.dial_registro_notificaciones', 'alerta_hasta') | int(0) }}"
+          hm: "{{ now().strftime('%H:%M') }}"
+          en_silencio: "{{ hm >= silencio_ini or hm < silencio_fin }}"
+      - condition: state
+        entity_id: input_boolean.dial_notificaciones
+        state: "on"
+      - condition: template
+        value_template: "{{ not en_silencio or (nocturna | default(false) | bool) }}"
+      - condition: template
+        value_template: "{{ cd == 0 or (ahora - ultimo) >= cd * 60 }}"
+      # Prioridad: lo que no es alerta espera a que termine la alerta en pantalla
+      - if:
+          - condition: template
+            value_template: "{{ niv != 'alerta' and alerta_hasta > ahora }}"
+        then:
+          - delay:
+              seconds: "{{ [alerta_hasta - ahora, 60] | min }}"
+      - action: esphome.m5_dial_mostrar_mensaje
+        data:
+          titulo: "{{ titulo }}"
+          mensaje: "{{ mensaje }}"
+          segundos: "{{ dur | int }}"
+          nivel: "{{ niv }}"
+      - event: dial_notificado
+        event_data:
+          clave: "{{ key }}"
+          nivel: "{{ niv }}"
+          titulo: "{{ titulo }}"
+          ts: "{{ now().timestamp() | int }}"
+          hasta: "{{ now().timestamp() | int + dur | int }}"
+
+# ---------------------------------------------------------------------
+# 4. Automatización con todos los avisos
+# ---------------------------------------------------------------------
+automation:
+  - id: dial_mega_notificaciones
+    alias: Dial · Mega-notificaciones
+    description: Envía al M5 Dial avisos clasificados por nivel (ver M5Dial_notificaciones.xlsx)
+    mode: parallel
+    max: 20
+    triggers:
+      # ================= ALERTA =================
+      # A2 · Corte de red: Victron deja de tomar la red como entrada
+      - trigger: template
+        id: A2
+        value_template: >
+          {% set s = states('sensor.gx_device_ac_active_input_source') | lower %}
+          {{ s not in ['unknown', 'unavailable', ''] and s != 'grid' }}
+        for: "00:00:10"
+      # A3 · Batería baja
+      - trigger: numeric_state
+        id: A3
+        entity_id: sensor.gx_device_dc_battery_charge
+        below: 25
+        for: "00:02:00"
+      # A5 · Viento con toldos fuera
+      - trigger: numeric_state
+        id: A5
+        entity_id: sensor.pirateweather_wind_gust
+        above: 40
+      # A6 · Fuga de agua
+      - trigger: state
+        id: A6
+        entity_id: binary_sensor.flood_detector_02f2_moisture
+        to: "on"
+      # A7 · Zigbee2MQTT desconectado
+      - trigger: state
+        id: A7
+        entity_id: binary_sensor.zigbee2mqtt_bridge_connection_state_2
+        to: "off"
+        for: "00:02:00"
+
+      # ================= AVISO =================
+      # W1 · Punta con consumo de red alto
+      - trigger: numeric_state
+        id: W1
+        entity_id: sensor.gx_device_grid_power_l1
+        above: 2500
+        for: "00:02:00"
+      - trigger: state
+        id: W1
+        entity_id: select.octopus_energy_contador
+      # W2 · AC encendido con puertas/ventanas abiertas
+      - trigger: template
+        id: W2
+        value_template: >
+          {% set abiertas = [
+               'binary_sensor.puerta_del_bano_window',
+               'binary_sensor.puerta_del_bano_grande_window',
+               'binary_sensor.puerta_principal_contact',
+               'binary_sensor.ventana_dormitorio_principal_window',
+               'binary_sensor.ventana_dormitorio_rakel_window',
+               'binary_sensor.ventana_salita_window',
+               'binary_sensor.puerta_del_patio_window',
+               'binary_sensor.bthome_sensor_7162_window'
+             ] | select('is_state', 'on') | list %}
+          {{ states('climate.casa') not in ['off', 'unavailable', 'unknown'] and abiertas | count > 0 }}
+        for: "00:02:00"
+      # W3 · Tesla sin enchufar por la noche
+      - trigger: time
+        id: W3
+        at: "22:00:00"
+      - trigger: state
+        id: W3
+        entity_id: device_tracker.tesla_model_y
+        to: home
+      # W4 · Probabilidad de lluvia con toldo fuera
+      - trigger: numeric_state
+        id: W4
+        entity_id: sensor.pirateweather_precip_probability
+        above: 60
+      # W5 · Frigate no está en marcha
+      - trigger: template
+        id: W5
+        value_template: "{{ states('sensor.frigate_status') != 'running' }}"
+        for: "00:05:00"
+      # W6 · Conga (r2d2) con error
+      - trigger: state
+        id: W6
+        entity_id: vacuum.r2d2
+        to: error
+      # W7 · Calor en casa sin AC
+      - trigger: numeric_state
+        id: W7
+        entity_id: sensor.temperatura_media_en_casa
+        above: 28
+        for: "00:10:00"
+
+      # ================= OK =================
+      # O1 · Lavadora terminada
+      - trigger: numeric_state
+        id: O1
+        entity_id: sensor.lavadora_sonoff_pow_power
+        below: 3
+        for: "00:03:00"
+      # O2 · Lavavajillas terminado (Home Connect)
+      - trigger: template
+        id: O2
+        value_template: "{{ 'finished' in states('sensor.lavavajillas_estado_de_operacion') | lower }}"
+      # O3 · Carga Tesla completada: el SOC deja de subir 20 min estando enchufado
+      - trigger: state
+        id: O3
+        entity_id: sensor.tesla_bateria
+        for: "00:20:00"
+      # O5 · Batería al 100 %
+      - trigger: numeric_state
+        id: O5
+        entity_id: sensor.gx_device_dc_battery_charge
+        above: 99.5
+      # O7 · Red restablecida
+      - trigger: template
+        id: O7
+        value_template: "{{ states('sensor.gx_device_ac_active_input_source') | lower == 'grid' }}"
+        for: "00:00:30"
+
+      # ================= INFO =================
+      # I1 · Cambio de tramo Octopus
+      - trigger: state
+        id: I1
+        entity_id: select.octopus_energy_contador
+      # I5 · Actualizaciones disponibles
+      - trigger: state
+        id: I5
+        entity_id:
+          - update.home_assistant_core_update
+          - update.home_assistant_operating_system_update
+          - update.home_assistant_supervisor_update
+          - update.esphome_update_2
+          - update.hacs_update
+        from: "off"
+        to: "on"
+
+    actions:
+      - choose:
+          # ---------------- A2 · Sin red ----------------
+          - conditions:
+              - condition: trigger
+                id: A2
+            sequence:
+              - action: script.dial_notificar
+                data:
+                  titulo: Sin red
+                  mensaje: >
+                    Con batería {{ states('sensor.gx_device_dc_battery_charge') | float(0) | round(0) | int }} %
+                    · {{ (states('sensor.gx_device_dc_battery_power') | float(0) | abs / 1000) | round(1) | string | replace('.', ',') }} kW
+                  nivel: alerta
+                  clave: A2
+                  cooldown: 5
+                  nocturna: true
+
+          # ---------------- A3 · Batería baja ----------------
+          - conditions:
+              - condition: trigger
+                id: A3
+            sequence:
+              - action: script.dial_notificar
+                data:
+                  titulo: Bat. baja
+                  mensaje: >
+                    SOC {{ states('sensor.gx_device_dc_battery_charge') | float(0) | round(0) | int }} %
+                    · {{ (states('sensor.gx_device_dc_battery_power') | float(0) | abs / 1000) | round(1) | string | replace('.', ',') }} kW
+                  nivel: alerta
+                  clave: A3
+                  cooldown: 30
+                  nocturna: true
+
+          # ---------------- A5 · Viento con toldos ----------------
+          - conditions:
+              - condition: trigger
+                id: A5
+              - condition: not
+                conditions:
+                  - condition: state
+                    entity_id: cover.toldos
+                    state: closed
+            sequence:
+              - action: script.dial_notificar
+                data:
+                  titulo: Toldos
+                  mensaje: >
+                    Racha {{ states('sensor.pirateweather_wind_gust') | float(0) | round(0) | int }} km/h · toldo fuera
+                  nivel: alerta
+                  clave: A5
+                  cooldown: 15
+                  nocturna: true
+
+          # ---------------- A6 · Fuga de agua ----------------
+          - conditions:
+              - condition: trigger
+                id: A6
+            sequence:
+              - action: script.dial_notificar
+                data:
+                  titulo: Fuga agua
+                  mensaje: Sensor de inundación activado
+                  nivel: alerta
+                  segundos: 120
+                  clave: A6
+                  cooldown: 5
+                  nocturna: true
+
+          # ---------------- A7 · Zigbee2MQTT ----------------
+          - conditions:
+              - condition: trigger
+                id: A7
+            sequence:
+              - action: script.dial_notificar
+                data:
+                  titulo: Zigbee caído
+                  mensaje: Z2M sin conexión. Revisar broker
+                  nivel: alerta
+                  clave: A7
+                  cooldown: 30
+                  nocturna: false
+
+          # ---------------- W1 · Punta + consumo ----------------
+          - conditions:
+              - condition: trigger
+                id: W1
+              - condition: template
+                value_template: >
+                  {{ states('select.octopus_energy_contador') | lower == 'punta'
+                     and states('sensor.gx_device_grid_power_l1') | float(0) > 2500 }}
+            sequence:
+              - action: script.dial_notificar
+                data:
+                  titulo: Punta
+                  mensaje: >
+                    {{ (states('sensor.gx_device_grid_power_l1') | float(0) / 1000) | round(1) | string | replace('.', ',') }} kW de red. Evita cargas
+                  nivel: aviso
+                  clave: W1
+                  cooldown: 30
+
+          # ---------------- W2 · AC + ventanas ----------------
+          - conditions:
+              - condition: trigger
+                id: W2
+            sequence:
+              - variables:
+                  abiertas: >
+                    {{ [
+                         'binary_sensor.puerta_del_bano_window',
+                         'binary_sensor.puerta_del_bano_grande_window',
+                         'binary_sensor.puerta_principal_contact',
+                         'binary_sensor.ventana_dormitorio_principal_window',
+                         'binary_sensor.ventana_dormitorio_rakel_window',
+                         'binary_sensor.ventana_salita_window',
+                         'binary_sensor.puerta_del_patio_window',
+                         'binary_sensor.bthome_sensor_7162_window'
+                       ] | select('is_state', 'on') | map('state_attr', 'friendly_name') | list }}
+              - action: script.dial_notificar
+                data:
+                  titulo: Clima
+                  mensaje: >
+                    {% if abiertas | count == 1 %}AC encendido: {{ abiertas[0] }} abierta
+                    {% else %}AC encendido: {{ abiertas | count }} huecos abiertos{% endif %}
+                  nivel: aviso
+                  clave: W2
+                  cooldown: 20
+
+          # ---------------- W3 · Tesla sin enchufar ----------------
+          - conditions:
+              - condition: trigger
+                id: W3
+              - condition: time
+                after: "21:59:00"
+                before: "06:00:00"
+              - condition: state
+                entity_id: device_tracker.tesla_model_y
+                state: home
+              - condition: numeric_state
+                entity_id: sensor.tesla_bateria
+                below: 50
+              - condition: state
+                entity_id: binary_sensor.tesla_enchufado
+                state: "off"
+            sequence:
+              - action: script.dial_notificar
+                data:
+                  titulo: Tesla
+                  mensaje: "{{ states('sensor.tesla_bateria') | float(0) | round(0) | int }} %, sin enchufar"
+                  nivel: aviso
+                  clave: W3
+                  cooldown: 720
+
+          # ---------------- W4 · Lluvia con toldo ----------------
+          - conditions:
+              - condition: trigger
+                id: W4
+              - condition: not
+                conditions:
+                  - condition: state
+                    entity_id: cover.toldos
+                    state: closed
+            sequence:
+              - action: script.dial_notificar
+                data:
+                  titulo: Lluvia
+                  mensaje: >
+                    Prob. {{ states('sensor.pirateweather_precip_probability') | float(0) | round(0) | int }} % · toldo fuera
+                  nivel: aviso
+                  clave: W4
+                  cooldown: 60
+
+          # ---------------- W5 · Frigate ----------------
+          - conditions:
+              - condition: trigger
+                id: W5
+            sequence:
+              - action: script.dial_notificar
+                data:
+                  titulo: Frigate
+                  mensaje: "Estado: {{ states('sensor.frigate_status') }}"
+                  nivel: aviso
+                  clave: W5
+                  cooldown: 720
+
+          # ---------------- W6 · Conga ----------------
+          - conditions:
+              - condition: trigger
+                id: W6
+            sequence:
+              - action: script.dial_notificar
+                data:
+                  titulo: R2D2
+                  mensaje: >
+                    {{ state_attr('vacuum.r2d2', 'error') or state_attr('vacuum.r2d2', 'status') or 'Atascada o con error' }}
+                  nivel: aviso
+                  clave: W6
+                  cooldown: 30
+
+          # ---------------- W7 · Calor sin AC ----------------
+          - conditions:
+              - condition: trigger
+                id: W7
+              - condition: state
+                entity_id: climate.casa
+                state: "off"
+            sequence:
+              - action: script.dial_notificar
+                data:
+                  titulo: Calor
+                  mensaje: >
+                    {{ states('sensor.temperatura_media_en_casa') | float(0) | round(1) | string | replace('.', ',') }} °C en casa, AC apagado
+                  nivel: aviso
+                  clave: W7
+                  cooldown: 60
+
+          # ---------------- O1 · Lavadora ----------------
+          - conditions:
+              - condition: trigger
+                id: O1
+              # solo si de verdad estuvo lavando (no al reiniciar HA)
+              - condition: template
+                value_template: >
+                  {{ trigger.from_state is not none
+                     and trigger.from_state.state not in ['unknown', 'unavailable'] }}
+            sequence:
+              - action: script.dial_notificar
+                data:
+                  titulo: Lavadora
+                  mensaje: Ciclo terminado. Tender la ropa
+                  nivel: ok
+                  clave: O1
+                  cooldown: 60
+
+          # ---------------- O2 · Lavavajillas ----------------
+          - conditions:
+              - condition: trigger
+                id: O2
+            sequence:
+              - action: script.dial_notificar
+                data:
+                  titulo: Lavavajillas
+                  mensaje: Ciclo terminado
+                  nivel: ok
+                  clave: O2
+                  cooldown: 60
+
+          # ---------------- O3 · Tesla cargado ----------------
+          - conditions:
+              - condition: trigger
+                id: O3
+              - condition: state
+                entity_id: binary_sensor.tesla_enchufado
+                state: "on"
+              - condition: state
+                entity_id: device_tracker.tesla_model_y
+                state: home
+              # el último cambio fue una subida (estaba cargando) y lleva 20 min parado
+              - condition: template
+                value_template: >
+                  {{ trigger.from_state is not none
+                     and trigger.from_state.state | is_number
+                     and trigger.to_state.state | is_number
+                     and trigger.to_state.state | float > trigger.from_state.state | float }}
+            sequence:
+              - action: script.dial_notificar
+                data:
+                  titulo: Tesla
+                  mensaje: "Carga completada · {{ states('sensor.tesla_bateria') | float(0) | round(0) | int }} %"
+                  nivel: ok
+                  clave: O3
+                  cooldown: 720
+
+          # ---------------- O5 · Batería llena ----------------
+          - conditions:
+              - condition: trigger
+                id: O5
+            sequence:
+              - action: script.dial_notificar
+                data:
+                  titulo: Batería
+                  mensaje: >
+                    {% set red = states('sensor.gx_device_grid_power_l1') | float(0) %}
+                    100 %{% if red < -100 %} · {{ (red | abs / 1000) | round(1) | string | replace('.', ',') }} kW a red{% endif %}
+                  nivel: ok
+                  clave: O5
+                  cooldown: 720
+
+          # ---------------- O7 · Red restablecida ----------------
+          - conditions:
+              - condition: trigger
+                id: O7
+              # solo si antes se notificó un corte (A2) más reciente que el último O7
+              - condition: template
+                value_template: >
+                  {% set u = state_attr('sensor.dial_registro_notificaciones', 'ultimos') or {} %}
+                  {{ u is mapping and u.get('a2', 0) | int(0) > u.get('o7', 0) | int(0) }}
+            sequence:
+              - action: script.dial_notificar
+                data:
+                  titulo: Red OK
+                  mensaje: >
+                    Red restablecida · batería {{ states('sensor.gx_device_dc_battery_charge') | float(0) | round(0) | int }} %
+                  nivel: ok
+                  clave: O7
+                  cooldown: 5
+                  nocturna: true
+
+          # ---------------- I1 · Cambio de tramo ----------------
+          - conditions:
+              - condition: trigger
+                id: I1
+              - condition: template
+                value_template: >
+                  {{ trigger.from_state is not none
+                     and trigger.from_state.state not in ['unknown', 'unavailable']
+                     and trigger.to_state.state not in ['unknown', 'unavailable']
+                     and trigger.from_state.state != trigger.to_state.state }}
+            sequence:
+              - action: script.dial_notificar
+                data:
+                  titulo: "Tramo {{ trigger.to_state.state | capitalize }}"
+                  mensaje: >
+                    {% set h = now().hour %}
+                    {% set t = trigger.to_state.state | lower %}
+                    {% if now().weekday() >= 5 and t == 'valle' %}Fin de semana: todo el día valle
+                    {% else %}
+                      {% set cambios = [8, 10, 14, 18, 22, 24] %}
+                      {% set fin = cambios | select('gt', h) | first %}
+                      Hasta las {{ '%02d' | format(fin if fin < 24 else 0) }}:00
+                    {% endif %}
+                  nivel: info
+                  clave: I1
+
+          # ---------------- I5 · Actualizaciones ----------------
+          - conditions:
+              - condition: trigger
+                id: I5
+            sequence:
+              - variables:
+                  nombres:
+                    update.home_assistant_core_update: HA Core
+                    update.home_assistant_operating_system_update: HA OS
+                    update.home_assistant_supervisor_update: Supervisor
+                    update.esphome_update_2: ESPHome
+                    update.hacs_update: HACS
+              - action: script.dial_notificar
+                data:
+                  titulo: Update
+                  mensaje: >
+                    {{ nombres[trigger.entity_id] }} {{ state_attr(trigger.entity_id, 'latest_version') }} disponible
+                  nivel: info
+                  segundos: 12
+                  clave: "I5_{{ trigger.entity_id }}"
+                  cooldown: 1440

@@ -4896,3 +4896,18 @@
         title: Git push falló
         message: '{{ git.stderr or git.stdout }}'
   mode: single
+- id: '1791128271238'
+  alias: Prueba notificacion m5stack dial
+  description: ''
+  triggers: []
+  conditions: []
+  actions:
+  - action: esphome.m5_dial_mostrar_mensaje
+    metadata: {}
+    data:
+      titulo: Batería
+      mensaje: SOC {{ states('sensor.gx_device_dc_battery_charge') }} % · {{ states('sensor.gx_device_dc_battery_power')
+        }} W
+      segundos: 10
+      nivel: aviso
+  mode: single
