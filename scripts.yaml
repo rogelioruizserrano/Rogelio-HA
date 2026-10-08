@@ -79,3 +79,51 @@ apagar_a_c:
       entity_id: switch.rele_aire_acondicionado
   mode: single
   icon: mdi:air-conditioner
+aviso_ducha_led_bano:
+  alias: Aviso ducha (LED baño)
+  description: Parpadeo de aviso por consumo alto en la ducha y restaura el LED.
+  mode: single
+  max_exceeded: silent
+  variables:
+    led: light.led_repisa_bano
+    parpadeos: 6
+    color_alto:
+    - 255
+    - 60
+    - 0
+    - 0
+    color_bajo:
+    - 255
+    - 0
+    - 0
+    - 0
+    brillo_bajo: 30
+    periodo: '00:00:01.2'
+  sequence:
+  - action: scene.create
+    data:
+      scene_id: led_bano_pre_alerta
+      snapshot_entities:
+      - '{{ led }}'
+  - repeat:
+      count: '{{ parpadeos }}'
+      sequence:
+      - action: light.turn_on
+        target:
+          entity_id: '{{ led }}'
+        data:
+          rgbw_color: '{{ color_alto }}'
+          brightness: 255
+          transition: 1
+      - delay: '{{ periodo }}'
+      - action: light.turn_on
+        target:
+          entity_id: '{{ led }}'
+        data:
+          rgbw_color: '{{ color_bajo }}'
+          brightness: '{{ brillo_bajo }}'
+          transition: 1
+      - delay: '{{ periodo }}'
+  - action: scene.turn_on
+    target:
+      entity_id: scene.led_bano_pre_alerta

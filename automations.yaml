@@ -4911,3 +4911,134 @@
       segundos: 10
       nivel: aviso
   mode: single
+- id: '1791410607467'
+  alias: Registrar duchas v3
+  description: Registra el consumo de hasta 4 duchas. Requiere luz del baño encendida.
+    Parámetros ajustables en el bloque `variables`.
+  triggers:
+  - trigger: numeric_state
+    id: caudal
+    entity_id: sensor.agua_caliente_pulse_counter_frequency_value
+    above: 0
+  - trigger: homeassistant
+    id: arranque
+    event: start
+  conditions:
+  - condition: or
+    conditions:
+    - condition: trigger
+      id: arranque
+    - condition: and
+      conditions:
+      - condition: state
+        entity_id: light.luz_bano
+        state: 'on'
+      - condition: state
+        entity_id: input_boolean.ducha_en_curso
+        state: 'off'
+  actions:
+  - alias: Reset del indicador tras reinicio
+    if:
+    - condition: trigger
+      id: arranque
+    then:
+    - action: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.ducha_en_curso
+    - stop: Reset de ducha_en_curso tras arranque
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.ducha_en_curso
+  - variables:
+      inicio: '{{ states(contador) | float(0) }}'
+  - alias: Guardar inicio (solo histórico/dashboard)
+    action: input_number.set_value
+    continue_on_error: true
+    target:
+      entity_id: input_number.ducha_inicio
+    data:
+      value: '{{ inicio }}'
+  - parallel:
+    - alias: Detectar fin de ducha
+      sequence:
+      - wait_for_trigger:
+        - trigger: numeric_state
+          entity_id: sensor.agua_caliente_pulse_counter_frequency_value
+          below: 1
+          for: '{{ pausa_fin }}'
+        timeout: '{{ duracion_max }}'
+        continue_on_timeout: true
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ducha_en_curso
+    - alias: Aviso por consumo alto
+      sequence:
+      - wait_for_trigger:
+        - trigger: template
+          id: umbral
+          value_template: '{{ states(contador) | float(0) - inicio >= umbral_aviso
+            }}'
+        - trigger: state
+          id: fin
+          entity_id: input_boolean.ducha_en_curso
+          to: 'off'
+        timeout: '{{ duracion_max }}'
+        continue_on_timeout: true
+      - if:
+        - condition: template
+          value_template: '{{ wait.trigger is not none and wait.trigger.id == ''umbral''
+            }}'
+        then:
+        - action: script.turn_on
+          target:
+            entity_id: script.aviso_ducha_led
+  - variables:
+      fin: '{{ states(contador) | float(0) }}'
+  - variables:
+      consumo: '{{ (fin - inicio) | round(1) }}'
+  - variables:
+      slot_libre: "{%- set ns = namespace(slot=none) -%} {%- for s in slots -%}\n
+        \ {%- if ns.slot is none and states(s) | float(0) < 1 -%}\n    {%- set ns.slot
+        = s -%}\n  {%- endif -%}\n{%- endfor -%} {{ ns.slot }}"
+  - alias: Guardar fin (solo histórico/dashboard)
+    action: input_number.set_value
+    continue_on_error: true
+    target:
+      entity_id: input_number.ducha_fin
+    data:
+      value: '{{ fin }}'
+  - alias: Descartar consumos pequeños (o negativos por reset del contador)
+    if:
+    - condition: template
+      value_template: '{{ consumo < consumo_minimo }}'
+    then:
+    - stop: Consumo inferior al mínimo, no se registra
+  - alias: Sin huecos libres
+    if:
+    - condition: template
+      value_template: '{{ slot_libre is none or slot_libre in ['''', ''None''] }}'
+    then:
+    - action: persistent_notification.create
+      data:
+        title: Registro de duchas
+        message: 'Ducha de {{ consumo }} L no registrada: los 4 huecos están ocupados.'
+        notification_id: duchas_sin_hueco
+    - stop: Sin huecos libres
+  - action: input_number.set_value
+    target:
+      entity_id: '{{ slot_libre }}'
+    data:
+      value: '{{ consumo }}'
+  mode: single
+  max_exceeded: silent
+  variables:
+    contador: sensor.contador_agua_caliente_diario
+    umbral_aviso: 25
+    consumo_minimo: 10
+    pausa_fin: 00:03:00
+    duracion_max: 00:45:00
+    slots:
+    - input_number.consumo_1o_ducha
+    - input_number.consumo_2o_ducha
+    - input_number.consumo_3o_ducha
+    - input_number.consumo_4o_ducha
