@@ -1,0 +1,322 @@
+# ============================================================
+# Extractor baño — package de Home Assistant
+# Fichero: /config/packages/extractor_bano.yaml
+#
+# Requiere en configuration.yaml:
+#   homeassistant:
+#     packages: !include_dir_named packages
+#
+# Entidades externas (si tus IDs son otros, reemplázalos en
+# este fichero con buscar/reemplazar):
+#   fan.ventilacion_mecanica              Shelly 1 Mini Gen3 (192.168.2.92)
+#   light.luz_bano                        Shelly de la luz (192.168.2.91)
+#   sensor.temperatura_bano_humidity      BLU H&T
+#   binary_sensor.puerta_del_bano_window  BLU Door/Window puerta  (on = abierta)
+#   binary_sensor.ventana_bano_ventana    BLU Door/Window ventana (on = abierta)
+#
+# Script del Shelly: id 1 -> URL /script/1/ha (ajustar si es otro)
+#
+# Reparto del control:
+#   - "HA al mando" = control activado + humedad y extractor
+#     disponibles en HA. Mientras lo esté, HA envía un latido cada
+#     minuto y el Shelly no toca el relé.
+#   - Si HA cae, se reinicia o pierde los sensores, el Shelly pasa
+#     a modo local en <= 3-4 min (o al instante con "liberar").
+#   - Umbrales, purga y horario se configuran aquí; viajan al
+#     Shelly en cada latido.
+# ============================================================
+
+# ------------------------------------------------------------
+# AJUSTES (configurables desde la UI)
+# ------------------------------------------------------------
+input_boolean:
+  extractor_bano_control_ha:
+    name: "Extractor baño · control desde HA"
+    icon: mdi:home-assistant
+
+input_number:
+  extractor_bano_humedad_alta:
+    name: "Extractor baño · humedad alta"
+    min: 40
+    max: 95
+    step: 1
+    unit_of_measurement: "%"
+    icon: mdi:water-percent-alert
+  extractor_bano_humedad_baja:
+    name: "Extractor baño · humedad baja"
+    min: 35
+    max: 90
+    step: 1
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+  extractor_bano_purga_min:
+    name: "Extractor baño · duración purga"
+    min: 1
+    max: 60
+    step: 1
+    unit_of_measurement: "min"
+    icon: mdi:fan-clock
+
+input_datetime:
+  extractor_bano_hora_inicio:
+    name: "Extractor baño · hora inicio"
+    has_date: false
+    has_time: true
+  extractor_bano_hora_fin:
+    name: "Extractor baño · hora fin"
+    has_date: false
+    has_time: true
+
+timer:
+  extractor_bano_purga:
+    name: "Extractor baño · purga"
+    icon: mdi:fan
+    restore: true
+
+# ------------------------------------------------------------
+# ESTADOS DERIVADOS (una sola definición, se usan en todo)
+# ------------------------------------------------------------
+template:
+  - binary_sensor:
+      # Puerta o ventana abierta. Desconocido = abierto (igual que el Shelly).
+      - name: "Extractor baño ventilación posible"
+        unique_id: extractor_bano_ventilacion_posible
+        icon: mdi:door-open
+        state: >
+          {{ not (is_state('binary_sensor.puerta_del_bano_window', 'off')
+                  and is_state('binary_sensor.ventana_bano_ventana', 'off')) }}
+
+      - name: "Extractor baño en horario"
+        unique_id: extractor_bano_en_horario
+        icon: mdi:clock-outline
+        state: >
+          {% set ini = state_attr('input_datetime.extractor_bano_hora_inicio', 'timestamp') | int(0) %}
+          {% set fin = state_attr('input_datetime.extractor_bano_hora_fin', 'timestamp') | int(0) %}
+          {% set ahora = now().hour * 3600 + now().minute * 60 %}
+          {{ ini <= ahora < fin }}
+
+      # HA solo manda si tiene lo necesario para decidir y actuar.
+      - name: "Extractor baño HA al mando"
+        unique_id: extractor_bano_ha_al_mando
+        icon: mdi:account-tie
+        state: >
+          {{ is_state('input_boolean.extractor_bano_control_ha', 'on')
+             and has_value('sensor.temperatura_bano_humidity')
+             and has_value('fan.ventilacion_mecanica') }}
+
+# ------------------------------------------------------------
+# COMUNICACIÓN CON EL SHELLY
+# ------------------------------------------------------------
+rest_command:
+  extractor_bano_latido:
+    url: >-
+      http://192.168.2.92/script/1/ha?cmd=latido&alta={{ states('input_number.extractor_bano_humedad_alta') | int }}&baja={{ states('input_number.extractor_bano_humedad_baja') | int }}&purga={{ states('input_number.extractor_bano_purga_min') | int }}&ini={{ (state_attr('input_datetime.extractor_bano_hora_inicio', 'timestamp') | int(0)) // 60 }}&fin={{ (state_attr('input_datetime.extractor_bano_hora_fin', 'timestamp') | int(0)) // 60 }}
+    method: get
+    timeout: 5
+  extractor_bano_liberar:
+    url: "http://192.168.2.92/script/1/ha?cmd=liberar"
+    method: get
+    timeout: 5
+
+# ------------------------------------------------------------
+# ACCIONES REUTILIZABLES
+# ------------------------------------------------------------
+script:
+  extractor_bano_iniciar_purga:
+    alias: "Extractor baño · iniciar purga"
+    icon: mdi:fan-clock
+    mode: restart
+    sequence:
+      - action: fan.turn_on
+        target:
+          entity_id: fan.ventilacion_mecanica
+      - action: timer.start
+        target:
+          entity_id: timer.extractor_bano_purga
+        data:
+          duration: >
+            {% set m = states('input_number.extractor_bano_purga_min') | int(15) %}
+            {{ '%02d:%02d:00' % (m // 60, m % 60) }}
+
+  extractor_bano_apagar:
+    alias: "Extractor baño · apagar"
+    icon: mdi:fan-off
+    mode: restart
+    sequence:
+      - action: timer.cancel
+        target:
+          entity_id: timer.extractor_bano_purga
+      - action: fan.turn_off
+        target:
+          entity_id: fan.ventilacion_mecanica
+
+  # Misma lógica que evaluar() del Shelly
+  extractor_bano_evaluar:
+    alias: "Extractor baño · evaluar"
+    icon: mdi:fan-auto
+    mode: queued
+    max: 5
+    variables:
+      humedad: "{{ states('sensor.temperatura_bano_humidity') | float(none) }}"
+      alta: "{{ states('input_number.extractor_bano_humedad_alta') | float(60) }}"
+      baja: "{{ states('input_number.extractor_bano_humedad_baja') | float(57) }}"
+      luz: "{{ is_state('light.luz_bano', 'on') }}"
+      purga_activa: "{{ is_state('timer.extractor_bano_purga', 'active') }}"
+      humedad_alta: "{{ humedad is not none and humedad > alta }}"
+      humedad_baja: "{{ humedad is not none and humedad < baja }}"
+    sequence:
+      - choose:
+          # 1. Fuera de horario o sin entrada de aire -> apagado
+          - conditions:
+              - condition: template
+                value_template: >
+                  {{ is_state('binary_sensor.extractor_bano_en_horario', 'off')
+                     or is_state('binary_sensor.extractor_bano_ventilacion_posible', 'off') }}
+            sequence:
+              - action: script.extractor_bano_apagar
+
+          # 2. Luz encendida + humedad alta -> encender (cancela purga)
+          - conditions: "{{ luz and humedad_alta }}"
+            sequence:
+              - action: timer.cancel
+                target:
+                  entity_id: timer.extractor_bano_purga
+              - action: fan.turn_on
+                target:
+                  entity_id: fan.ventilacion_mecanica
+
+          # 3. Luz encendida + humedad baja -> apagar
+          #    (entre baja y alta no se hace nada: histéresis)
+          - conditions: "{{ luz and humedad_baja }}"
+            sequence:
+              - action: script.extractor_bano_apagar
+
+          # 4. Luz apagada, sin purga y humedad alta -> purga
+          - conditions: "{{ not luz and not purga_activa and humedad_alta }}"
+            sequence:
+              - action: script.extractor_bano_iniciar_purga
+
+          # 5. Luz apagada, sin purga y sin necesidad -> apagado
+          - conditions: "{{ not luz and not purga_activa }}"
+            sequence:
+              - action: script.extractor_bano_apagar
+
+# ------------------------------------------------------------
+# AUTOMATIZACIONES
+# ------------------------------------------------------------
+automation:
+  # Latido: mantiene a HA al mando y pasa la configuración al Shelly
+  - id: extractor_bano_latido
+    alias: "Extractor baño · latido al Shelly"
+    description: >
+      Cada minuto avisa al Shelly de que HA manda y le envía la configuración.
+      Si HA deja de estar al mando, le devuelve el control inmediatamente.
+    mode: single
+    triggers:
+      - trigger: time_pattern
+        minutes: "/1"
+      - trigger: homeassistant
+        event: start
+      - trigger: state
+        entity_id: binary_sensor.extractor_bano_ha_al_mando
+      - trigger: state
+        entity_id:
+          - input_number.extractor_bano_humedad_alta
+          - input_number.extractor_bano_humedad_baja
+          - input_number.extractor_bano_purga_min
+          - input_datetime.extractor_bano_hora_inicio
+          - input_datetime.extractor_bano_hora_fin
+    actions:
+      - if:
+          - condition: state
+            entity_id: binary_sensor.extractor_bano_ha_al_mando
+            state: "on"
+        then:
+          - action: rest_command.extractor_bano_latido
+            response_variable: resp
+            continue_on_error: true
+          # Si el Shelly venía de modo local, HA re-evalúa al recuperar el mando
+          - if:
+              - condition: template
+                value_template: >
+                  {{ resp is defined and resp.status == 200
+                     and resp.content is mapping
+                     and resp.content.modo_previo == 'local' }}
+            then:
+              - action: script.extractor_bano_evaluar
+        else:
+          - action: rest_command.extractor_bano_liberar
+            continue_on_error: true
+
+  # Control del extractor cuando HA está al mando
+  - id: extractor_bano_control
+    alias: "Extractor baño · control"
+    description: >
+      Lógica del extractor con HA al mando. Si HA no responde, el script
+      del Shelly ejecuta la misma lógica en local.
+    mode: queued
+    max: 10
+    triggers:
+      - trigger: state
+        entity_id: sensor.temperatura_bano_humidity
+        id: humedad
+      - trigger: state
+        entity_id: light.luz_bano
+        to: "on"
+        id: luz_on
+      - trigger: state
+        entity_id: light.luz_bano
+        to: "off"
+        id: luz_off
+      - trigger: state
+        entity_id:
+          - binary_sensor.extractor_bano_ventilacion_posible
+          - binary_sensor.extractor_bano_en_horario
+          - binary_sensor.extractor_bano_ha_al_mando
+          - input_number.extractor_bano_humedad_alta
+          - input_number.extractor_bano_humedad_baja
+        id: condiciones
+      - trigger: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.extractor_bano_purga
+        id: fin_purga
+    conditions:
+      - condition: state
+        entity_id: binary_sensor.extractor_bano_ha_al_mando
+        state: "on"
+    actions:
+      - choose:
+          # Al apagar la luz: purga (si hay horario, entrada de aire y no hay purga ya)
+          - conditions:
+              - condition: trigger
+                id: luz_off
+              - condition: state
+                entity_id: binary_sensor.extractor_bano_en_horario
+                state: "on"
+              - condition: state
+                entity_id: binary_sensor.extractor_bano_ventilacion_posible
+                state: "on"
+              - condition: state
+                entity_id: timer.extractor_bano_purga
+                state: "idle"
+            sequence:
+              - action: script.extractor_bano_iniciar_purga
+
+          # Fin de purga con luz apagada y humedad aún alta: otra purga
+          - conditions:
+              - condition: trigger
+                id: fin_purga
+              - condition: template
+                value_template: >
+                  {{ is_state('light.luz_bano', 'off')
+                     and is_state('binary_sensor.extractor_bano_en_horario', 'on')
+                     and is_state('binary_sensor.extractor_bano_ventilacion_posible', 'on')
+                     and states('sensor.temperatura_bano_humidity') | float(0)
+                         > states('input_number.extractor_bano_humedad_alta') | float(60) }}
+            sequence:
+              - action: script.extractor_bano_iniciar_purga
+
+        # Resto de casos: lógica general
+        default:
+          - action: script.extractor_bano_evaluar
