@@ -268,7 +268,9 @@ include:
     - sensor.temperatura_salita_1_humidity
     - sensor.temperatura_salita_1_temperature
     - sensor.pasillo_temperatura
+    - sensor.pasillo_humedad
     - sensor.escritorio_cine_temperatura
+    - sensor.escritorio_cine_humedad
 
 
     # ===== Tiempo exterior =====

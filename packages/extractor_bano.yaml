@@ -118,6 +118,26 @@ rest_command:
     method: get
     timeout: 5
 
+# Estado del script del Shelly: modo (ha/local) y lo que ve de los sensores
+rest:
+  - resource: http://192.168.2.92/script/1/ha
+    scan_interval: 30
+    timeout: 5
+    sensor:
+      - name: "Extractor baño modo"
+        unique_id: extractor_bano_modo
+        icon: mdi:swap-horizontal
+        value_template: "{{ value_json.modo }}"
+        json_attributes:
+          - humedad
+          - luz
+          - puerta
+          - ventana
+          - purga
+          - alta
+          - baja
+          - purga_min
+
 # ------------------------------------------------------------
 # ACCIONES REUTILIZABLES
 # ------------------------------------------------------------
@@ -200,6 +220,111 @@ script:
           - conditions: "{{ not luz and not purga_activa }}"
             sequence:
               - action: script.extractor_bano_apagar
+
+  # Aviso por voz generado por IA cuando el extractor no puede ventilar bien.
+  #   tipo = ventana_o_puerta -> A/C apagado: abrir ventana o dejar puerta abierta
+  #   tipo = abrir_ventana    -> A/C encendido: abrir la ventana (la puerta no vale,
+  #                              el extractor se llevaría el aire climatizado)
+  extractor_bano_aviso_ventilacion:
+    alias: "Extractor baño · aviso de ventilación (IA)"
+    icon: mdi:account-voice
+    mode: single
+    max_exceeded: silent
+    fields:
+      tipo:
+        name: Tipo de aviso
+        description: "abrir_ventana (A/C encendido) o ventana_o_puerta (A/C apagado)"
+        required: true
+        example: ventana_o_puerta
+        selector:
+          select:
+            options:
+              - abrir_ventana
+              - ventana_o_puerta
+    variables:
+      estilos:
+        - narrador deportivo
+        - presentador de telediario
+        - documental de naturaleza
+        - tráiler de película épica
+        - anuncio de teletienda
+        - parte meteorológico
+        - operador de atención al cliente
+        - investigador privado
+      situacion: >-
+        {%- if tipo == 'abrir_ventana' -%}
+        Alguien acaba de salir del baño. El aire acondicionado de la casa está
+        encendido y la ventana del baño está cerrada, así que el extractor se está
+        llevando el aire fresco de la casa en lugar de aire de la calle.
+        {%- else -%}
+        Alguien acaba de salir del baño y ha cerrado la puerta con la ventana
+        también cerrada, así que el extractor no tiene por dónde coger aire y no
+        puede sacar la humedad.
+        {%- endif -%}
+      peticion: >-
+        {%- if tipo == 'abrir_ventana' -%}
+        que abran la ventana del baño
+        {%- else -%}
+        que abran la ventana del baño o dejen la puerta del baño abierta
+        {%- endif -%}
+      aviso_fallback: >-
+        {%- if tipo == 'abrir_ventana' -%}
+        Atención. El aire acondicionado está encendido y la ventana del baño está
+        cerrada. Abrid la ventana para que el extractor no se lleve el aire fresco
+        de la casa.
+        {%- else -%}
+        Atención. La puerta y la ventana del baño están cerradas y el extractor no
+        tiene por dónde coger aire. Abrid la ventana o dejad la puerta abierta.
+        {%- endif -%}
+    sequence:
+      - variables:
+          ai_message: {}
+          estilo: "{{ estilos | random }}"
+      - action: ai_task.generate_data
+        continue_on_error: true
+        data:
+          entity_id: ai_task.openai_ai_task
+          task_name: aviso_extractor_bano
+          instructions: >
+            Genera un aviso corto para reproducir por voz en una vivienda.
+
+            Situación: {{ situacion }}
+
+            Lo que hay que pedir: {{ peticion }}.
+
+            Estilo narrativo obligatorio para este mensaje: {{ estilo }}.
+
+            Requisitos:
+
+            - Español de España. Máximo 2 frases cortas.
+
+            - Deja claro qué hay que hacer: {{ peticion }}.
+
+            - Humor inteligente, ironía o sarcasmo suave: baño convertido en sauna,
+              extractor ahogándose, humedad okupa o similar.
+
+            - Debe sonar natural leído en voz alta.
+
+            - Sin emojis, sin comillas y sin explicaciones fuera del mensaje.
+        response_variable: ai_message
+      - variables:
+          mensaje: |-
+            {% if ai_message.data is defined and ai_message.data is string
+                  and ai_message.data | trim != '' %}
+              {{ ai_message.data | trim }}
+            {% else %}
+              {{ aviso_fallback }}
+            {% endif %}
+      - action: tts.speak
+        target:
+          entity_id: tts.openai_tts_openai_tts_gpt_40_mini
+        data:
+          cache: false
+          media_player_entity_id:
+            - media_player.bano
+            - media_player.google_nest_hub_cocina
+          message: "{{ mensaje }}"
+          language: es
 
 # ------------------------------------------------------------
 # AUTOMATIZACIONES
@@ -320,3 +445,54 @@ automation:
         # Resto de casos: lógica general
         default:
           - action: script.extractor_bano_evaluar
+
+  # Aviso al salir del baño si el extractor se queda sin entrada de aire adecuada
+  - id: extractor_bano_aviso_ventilacion
+    alias: "Extractor baño · aviso de ventilación al salir"
+    description: >
+      Tras apagar la luz (salida del baño), avisa por voz si la ventilación no es
+      adecuada. A/C apagado: puerta y ventana cerradas -> abrir una de las dos.
+      A/C encendido: ventana cerrada -> abrir la ventana (aunque la puerta esté
+      abierta, para no extraer aire climatizado).
+    mode: single
+    max_exceeded: silent
+    triggers:
+      - trigger: state
+        entity_id: light.luz_bano
+        to: "off"
+        for: "00:00:20"
+      - trigger: state
+        entity_id: binary_sensor.puerta_del_bano_window
+        to: "off"
+        for: "00:00:20"
+    variables:
+      ac_encendido: "{{ states('climate.casa') not in ['off', 'unavailable', 'unknown'] }}"
+      tipo: "{{ 'abrir_ventana' if ac_encendido else 'ventana_o_puerta' }}"
+    conditions:
+      # El extractor solo actúa en horario
+      - condition: state
+        entity_id: binary_sensor.extractor_bano_en_horario
+        state: "on"
+      - condition: state
+        entity_id: light.luz_bano
+        state: "off"
+      - condition: state
+        entity_id: binary_sensor.ventana_bano_ventana
+        state: "off"
+      # Solo justo después de salir (luz apagada hace menos de 5 min)
+      - condition: template
+        value_template: >
+          {{ (now() - states.light.luz_bano.last_changed).total_seconds() < 300 }}
+      # A/C apagado: además la puerta tiene que estar cerrada
+      - condition: template
+        value_template: >
+          {{ ac_encendido or is_state('binary_sensor.puerta_del_bano_window', 'off') }}
+      # Un solo aviso por salida (luz off + cierre de puerta no avisan dos veces)
+      - condition: template
+        value_template: >
+          {{ this.attributes.last_triggered is none
+             or (now() - this.attributes.last_triggered).total_seconds() > 300 }}
+    actions:
+      - action: script.extractor_bano_aviso_ventilacion
+        data:
+          tipo: "{{ tipo }}"
