@@ -26,11 +26,6 @@ wifi:
     ssid: "Sensor-Temperatura-1"
     password: "vDunrhm8tKI7"
 
-mqtt:
-  broker: !secret mqtt_host
-  username: !secret mqtt_username
-  password: !secret mqtt_password
-
 captive_portal:
 
 i2c:
