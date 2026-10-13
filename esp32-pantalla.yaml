@@ -10,10 +10,10 @@ substitutions:
 esphome:
   name: esp32-pantalla
   comment: ${device_description}
-  min_version: 2024.6.0
+  min_version: 2024.12.0
   project:
     name: "syssi.esphome-tianpower-bms"
-    version: 2.0.0
+    version: 2.3.0
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -31,6 +31,11 @@ wifi:
 ota:
   - platform: esphome
     encryption:
+    on_begin:
+      then:
+        - switch.turn_off: ble_client_switch0
+        - switch.turn_off: ble_client_switch1
+        - logger.log: "BLE suspendido para OTA"
 
 logger:
   level: DEBUG
@@ -48,7 +53,7 @@ api:
 
 esp32_ble_tracker:
   scan_parameters:
-    active: True
+    active: false
 
 ble_client:
   - mac_address: ${bms0_mac_address}
@@ -67,6 +72,8 @@ tianpower_bms_ble:
 binary_sensor:
   - platform: tianpower_bms_ble
     tianpower_bms_ble_id: bms0
+    online_status:
+      name: "${bms0} online status"
     charging:
       name: "${bms0} charging"
     discharging:
@@ -110,6 +117,8 @@ binary_sensor:
 
   - platform: tianpower_bms_ble
     tianpower_bms_ble_id: bms1
+    online_status:
+      name: "${bms1} online status"
     charging:
       name: "${bms1} charging"
     discharging:
