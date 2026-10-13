@@ -30,7 +30,7 @@ api:
 
 ota:
   - platform: esphome
-    password: "c817c9d9824aedd06e40b7d9a4b0f4d6"
+    encryption:
 
 wifi:
   min_auth_mode: WPA2
