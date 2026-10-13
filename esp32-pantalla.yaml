@@ -30,7 +30,7 @@ wifi:
 
 ota:
   - platform: esphome
-    password: "b015bfa46eadbf2ece7c29b31ab221c4"
+    encryption:
 
 logger:
   level: DEBUG
