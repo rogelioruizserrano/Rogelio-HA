@@ -1,0 +1,206 @@
+# =============================================================================
+# packages/energia_base.yaml
+# -----------------------------------------------------------------------------
+# Sensores BASE de energía: leen directamente de los equipos (Victron, SMA,
+# Shelly EM, SmartShunt) y los normalizan con nombres semánticos.
+# Regla: aquí NO hay cálculos entre sensores propios -> eso va en
+# energia_calculos.yaml.
+#
+# Convenios:
+#   - Potencias en W redondeadas a 0 decimales (menos escrituras en la BD).
+#   - Todo sensor lleva `availability` -> nunca publica un 0 falso.
+#     (Crítico en los total_increasing: un 0 falso y la vuelta al valor real
+#      se cuentan como reinicio de contador y duplican energía en el panel.)
+#   - default_entity_id fija el entity_id aunque cambies el nombre.
+# =============================================================================
+
+template:
+  - sensor:
+
+      # -----------------------------------------------------------------------
+      # RED
+      # Potencia con signo: + importando / - exportando (GX).
+      # Energía: contadores nativos del Shelly EM en la acometida -> coinciden
+      # con lo que factura Octopus (los contadores del Multiplus no incluyen
+      # AC-in -> batería ni cargas antes del inversor).
+      # -----------------------------------------------------------------------
+      - name: Potencia Red
+        unique_id: pkg_energia_potencia_red
+        default_entity_id: sensor.potencia_red
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ has_value('sensor.gx_device_grid_power_l1') }}"
+        state: "{{ states('sensor.gx_device_grid_power_l1') | float | round(0) }}"
+
+      - name: Consumo Red
+        unique_id: pkg_energia_consumo_red
+        default_entity_id: sensor.consumo_red
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ has_value('sensor.potencia_red') }}"
+        state: "{{ [states('sensor.potencia_red') | float, 0] | max }}"
+
+      - name: Excedentes Red
+        unique_id: pkg_energia_excedentes_red
+        default_entity_id: sensor.excedentes_red
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ has_value('sensor.potencia_red') }}"
+        state: "{{ [0 - states('sensor.potencia_red') | float, 0] | max }}"
+
+      - name: Energia Importada Red
+        unique_id: pkg_energia_importada_red
+        default_entity_id: sensor.energia_importada_red
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        availability: "{{ has_value('sensor.shellyem_244cab418bca_channel_1_energy') }}"
+        state: "{{ states('sensor.shellyem_244cab418bca_channel_1_energy') | float | round(3) }}"
+
+      - name: Energia Exportada Red
+        unique_id: pkg_energia_exportada_red
+        default_entity_id: sensor.energia_exportada_red
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        availability: "{{ has_value('sensor.shellyem_244cab418bca_channel_1_energy_returned') }}"
+        state: "{{ states('sensor.shellyem_244cab418bca_channel_1_energy_returned') | float | round(3) }}"
+
+      # -----------------------------------------------------------------------
+      # CONSUMO CASA
+      # Consumo AC del sistema GX = salida Multiplus + FV en AC-out (SMA).
+      # NO usar la potencia de salida del Multiplus: con el SMA en AC-out
+      # es un valor neto y puede ser negativo.
+      # -----------------------------------------------------------------------
+      - name: Consumo Casa
+        unique_id: pkg_energia_consumo_casa
+        default_entity_id: sensor.consumo_casa
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ has_value('sensor.gx_device_consumption_power_l1') }}"
+        state: "{{ states('sensor.gx_device_consumption_power_l1') | float | round(0) }}"
+
+      # -----------------------------------------------------------------------
+      # BATERÍA
+      # Potencia de batería del GX (SmartShunt): + carga / - descarga.
+      # NO usar la potencia DC del Multiplus: no incluye lo que carga el MPPT.
+      # -----------------------------------------------------------------------
+      - name: Potencia Bateria
+        unique_id: pkg_energia_potencia_bateria
+        default_entity_id: sensor.potencia_bateria
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ has_value('sensor.gx_device_dc_battery_power') }}"
+        state: "{{ states('sensor.gx_device_dc_battery_power') | float | round(0) }}"
+
+      - name: Carga Bateria
+        unique_id: pkg_energia_carga_bateria
+        default_entity_id: sensor.carga_bateria
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ has_value('sensor.potencia_bateria') }}"
+        state: "{{ [states('sensor.potencia_bateria') | float, 0] | max }}"
+
+      - name: Descarga Bateria
+        unique_id: pkg_energia_descarga_bateria
+        default_entity_id: sensor.descarga_bateria
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ has_value('sensor.potencia_bateria') }}"
+        state: "{{ [0 - states('sensor.potencia_bateria') | float, 0] | max }}"
+
+      - name: SOC Bateria
+        unique_id: pkg_energia_soc_bateria
+        default_entity_id: sensor.soc_bateria
+        unit_of_measurement: "%"
+        device_class: battery
+        state_class: measurement
+        availability: "{{ has_value('sensor.gx_device_dc_battery_charge') }}"
+        state: "{{ states('sensor.gx_device_dc_battery_charge') | float | round(1) }}"
+
+      - name: Energia Cargada Bateria
+        unique_id: pkg_energia_cargada_bateria
+        default_entity_id: sensor.energia_cargada_bateria
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        availability: "{{ has_value('sensor.smartshunt_charged_energy') }}"
+        state: "{{ states('sensor.smartshunt_charged_energy') | float | round(3) }}"
+
+      - name: Energia Descargada Bateria
+        unique_id: pkg_energia_descargada_bateria
+        default_entity_id: sensor.energia_descargada_bateria
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        availability: "{{ has_value('sensor.smartshunt_discharged_energy') }}"
+        state: "{{ states('sensor.smartshunt_discharged_energy') | float | round(3) }}"
+
+      # -----------------------------------------------------------------------
+      # SOLAR SMA (AC-coupled en AC-out)
+      # -----------------------------------------------------------------------
+      - name: Potencia FV SMA
+        unique_id: pkg_energia_potencia_fv_sma
+        default_entity_id: sensor.potencia_fv_sma
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ has_value('sensor.sb5_0_1av_41_936_pv_power') }}"
+        state: "{{ states('sensor.sb5_0_1av_41_936_pv_power') | float | round(0) }}"
+
+      - name: String Sureste
+        unique_id: pkg_energia_string_sureste
+        default_entity_id: sensor.string_sureste
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ has_value('sensor.sb5_0_1av_41_936_pv_power_a') }}"
+        state: "{{ states('sensor.sb5_0_1av_41_936_pv_power_a') | float | round(0) }}"
+
+      - name: String Suroeste
+        unique_id: pkg_energia_string_suroeste
+        default_entity_id: sensor.string_suroeste
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ has_value('sensor.sb5_0_1av_41_936_pv_power_b') }}"
+        state: "{{ states('sensor.sb5_0_1av_41_936_pv_power_b') | float | round(0) }}"
+
+      # Diaria: se resetea a 0 a medianoche -> total_increasing (no measurement:
+      # device_class energy no admite measurement).
+      - name: Energia FV SMA Diaria
+        unique_id: pkg_energia_fv_sma_diaria
+        default_entity_id: sensor.energia_fv_sma_diaria
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        availability: "{{ has_value('sensor.sb5_0_1av_41_936_daily_yield') }}"
+        state: "{{ states('sensor.sb5_0_1av_41_936_daily_yield') | float | round(3) }}"
+
+      # -----------------------------------------------------------------------
+      # SOLAR MPPT (DC-coupled)
+      # -----------------------------------------------------------------------
+      - name: Potencia FV MPPT
+        unique_id: pkg_energia_potencia_fv_mppt
+        default_entity_id: sensor.potencia_fv_mppt
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ has_value('sensor.smartsolar_charger_mppt_150_35_id_278_pv_yield_power') }}"
+        state: "{{ states('sensor.smartsolar_charger_mppt_150_35_id_278_pv_yield_power') | float | round(0) }}"
+
+      - name: Energia FV MPPT Diaria
+        unique_id: pkg_energia_fv_mppt_diaria
+        default_entity_id: sensor.energia_fv_mppt_diaria
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        availability: "{{ has_value('sensor.smartsolar_charger_mppt_150_35_id_278_rendimiento_hoy') }}"
+        state: "{{ states('sensor.smartsolar_charger_mppt_150_35_id_278_rendimiento_hoy') | float | round(3) }}"

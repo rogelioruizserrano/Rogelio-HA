@@ -1,0 +1,115 @@
+# =============================================================================
+# packages/energia_contadores.yaml
+# -----------------------------------------------------------------------------
+# Contadores de periodo (utility_meter) alimentados por los nuevos sensores de
+# energia_base.yaml. SUSTITUYE a utility_meter.yaml.
+#
+# Se mantienen los MISMOS nombres y unique_id que en utility_meter.yaml, así
+# los entity_id (sensor.red_diario, sensor.excedentes_mensual...) no cambian:
+# dashboards, Octopus y plantillas siguen funcionando y se conserva el
+# historial. Solo cambia la fuente.
+#
+# IMPORTANTE: al activar este package hay que vaciar utility_meter.yaml
+# (o quitar su include) para no duplicar claves.
+# =============================================================================
+
+# Energía de la casa (no hay contador nativo de consumo AC en el GX)
+sensor:
+  - platform: integration
+    source: sensor.consumo_casa
+    name: Energia Consumo Casa
+    unique_id: pkg_energia_consumo_casa_kwh
+    unit_prefix: k
+    method: left
+    round: 3
+    max_sub_interval:
+      minutes: 5
+
+utility_meter:
+
+  # ---------------------------------------------------------------- RED (importación)
+  red_hora:
+    source: sensor.energia_importada_red
+    cycle: hourly
+    unique_id: consumo_de_la_red_hourly
+  red_diario:
+    source: sensor.energia_importada_red
+    cycle: daily
+    unique_id: consumo_de_la_red_daily
+  red_mensual:
+    source: sensor.energia_importada_red
+    cycle: monthly
+    unique_id: consumo_de_la_red_monthly
+  red_anual:
+    source: sensor.energia_importada_red
+    cycle: yearly
+    unique_id: consumo_de_la_red_yearly
+
+  # ---------------------------------------------------------------- EXCEDENTES (exportación)
+  excedentes_hora:
+    source: sensor.energia_exportada_red
+    cycle: hourly
+    unique_id: excedentes_kwh_hourly
+  excedentes_diario:
+    source: sensor.energia_exportada_red
+    cycle: daily
+    unique_id: excedentes_kwh_daily
+  excedentes_mensual:
+    source: sensor.energia_exportada_red
+    cycle: monthly
+    unique_id: excedentes_kwh_monthly
+  excedentes_anual:
+    source: sensor.energia_exportada_red
+    cycle: yearly
+    unique_id: excedentes_kwh_yearly
+
+  # ---------------------------------------------------------------- BATERÍA
+  bateria_carga_diario:
+    source: sensor.energia_cargada_bateria
+    cycle: daily
+    unique_id: bateria_carga_diario
+  bateria_carga_mensual:
+    source: sensor.energia_cargada_bateria
+    cycle: monthly
+    unique_id: bateria_carga_mensual
+  bateria_carga_anual:
+    source: sensor.energia_cargada_bateria
+    cycle: yearly
+    unique_id: bateria_carga_anual
+
+  bateria_descarga_diario:
+    source: sensor.energia_descargada_bateria
+    cycle: daily
+    unique_id: bateria_descarga_kwh_daily
+  bateria_descarga_mensual:
+    source: sensor.energia_descargada_bateria
+    cycle: monthly
+    unique_id: bateria_descarga_kwh_monthly
+  bateria_descarga_anual:
+    source: sensor.energia_descargada_bateria
+    cycle: yearly
+    unique_id: bateria_descarga_kwh_yearly
+
+  # ---------------------------------------------------------------- CONSUMO CASA
+  consumo_casa_diario:
+    source: sensor.energia_consumo_casa
+    cycle: daily
+    unique_id: consumo_de_la_casa_kwh_daily
+  consumo_casa_mensual:
+    source: sensor.energia_consumo_casa
+    cycle: monthly
+    unique_id: consumo_de_la_casa_kwh_monthly
+  consumo_casa_anual:
+    source: sensor.energia_consumo_casa
+    cycle: yearly
+    unique_id: consumo_de_la_casa_kwh_yearly
+
+  # ---------------------------------------------------------------- SOLAR (nuevo)
+  solar_mensual:
+    source: sensor.energia_fv_total_diaria
+    cycle: monthly
+    unique_id: pkg_energia_solar_mensual
+  solar_anual:
+    source: sensor.energia_fv_total_diaria
+    cycle: yearly
+    unique_id: pkg_energia_solar_anual

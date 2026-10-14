@@ -1,0 +1,229 @@
+# =============================================================================
+# packages/energia_electrodomesticos.yaml
+# -----------------------------------------------------------------------------
+# Consumo por electrodoméstico / circuito.
+#
+#   1. Si el dispositivo YA tiene sensor de energía nativo (Shelly, Sonoff,
+#      Tapo...), úsalo tal cual en el panel de Energía. NO lo envuelvas en un
+#      template ni le hagas Riemann: el contador nativo sobrevive a reinicios
+#      de HA y es más preciso.
+#   2. Si solo da potencia (W), aquí se crea su energía con `integration`.
+#   3. Los agregados (termos, medible, no medible) se calculan aquí.
+#
+# Energía NATIVA ya disponible (añádela directamente en
+# Ajustes > Paneles > Energía > Dispositivos individuales):
+#   sensor.aire_acondicionado_energy
+#   sensor.armario_red_energy
+#   sensor.horno_energy
+#   sensor.bambulab_energy
+#   sensor.termo_50l_switch_0_energy
+#   sensor.shelly1pm_68c63afb367a_energy          (termo 100 L)
+#   sensor.taller_consumo_taller_energia
+#   sensor.v2c_trydan_charging_energy
+#   sensor.shellyem_e45b47_channel_1_energy       (línea enchufes)
+#   sensor.shellyem_e45b47_channel_2_energy
+#   sensor.shellyplug_s_3ce90ee04758_energy
+# =============================================================================
+
+template:
+  - sensor:
+
+      # -----------------------------------------------------------------------
+      # TERMOS
+      # -----------------------------------------------------------------------
+      - name: Potencia Termos
+        unique_id: pkg_energia_potencia_termos
+        default_entity_id: sensor.potencia_termos
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        icon: mdi:water-boiler
+        availability: >
+          {{ has_value('sensor.termo_50l_switch_0_power')
+             or has_value('sensor.switch_termo_100l_00_00_00_cuartillo_azotea_interior_power') }}
+        state: >
+          {{ (states('sensor.termo_50l_switch_0_power') | float(0)
+            + states('sensor.switch_termo_100l_00_00_00_cuartillo_azotea_interior_power') | float(0))
+            | round(0) }}
+
+      # Suma de contadores -> total_increasing, solo si ambos están disponibles
+      - name: Energia Termos
+        unique_id: pkg_energia_energia_termos
+        default_entity_id: sensor.energia_termos_total
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        icon: mdi:water-boiler
+        availability: >
+          {{ has_value('sensor.termo_50l_switch_0_energy')
+             and has_value('sensor.shelly1pm_68c63afb367a_energy') }}
+        state: >
+          {{ (states('sensor.termo_50l_switch_0_energy') | float
+            + states('sensor.shelly1pm_68c63afb367a_energy') | float) | round(3) }}
+
+      # -----------------------------------------------------------------------
+      # LÍNEA DE ENCHUFES (Shelly EM e45b47 canal 1) sin lo que ya se mide aparte
+      # -----------------------------------------------------------------------
+      - name: Potencia Enchufes Resto
+        unique_id: pkg_energia_potencia_enchufes_resto
+        default_entity_id: sensor.potencia_enchufes_resto
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        icon: mdi:power-socket-eu
+        availability: "{{ has_value('sensor.shellyem_e45b47_channel_1_power') }}"
+        state: >
+          {{ [states('sensor.shellyem_e45b47_channel_1_power') | float
+              - states('sensor.armario_red_power') | float(0)
+              - states('sensor.radiador_cocina_power') | float(0)
+              - states('sensor.radiador_salita_power') | float(0), 0] | max | round(0) }}
+
+      # -----------------------------------------------------------------------
+      # CONSUMO MEDIDO (suma de todo lo que tiene medidor propio)
+      # La línea de enchufes (EM e45b47 ch1) YA incluye armario de red y
+      # radiadores -> no se suman aparte (antes se contaban dos veces).
+      # -----------------------------------------------------------------------
+      - name: Consumo Medido
+        unique_id: pkg_energia_consumo_medido
+        default_entity_id: sensor.consumo_medido
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        icon: mdi:meter-electric
+        state: >
+          {% set fuentes = [
+            'sensor.shellyem_e45b47_channel_1_power',
+            'sensor.shellyem_e45b47_channel_2_power',
+            'sensor.luces_escalera_power',
+            'sensor.termo_50l_switch_0_power',
+            'sensor.switch_termo_100l_00_00_00_cuartillo_azotea_interior_power',
+            'sensor.vitroceramica_power',
+            'sensor.secadora_switch_0_power',
+            'sensor.consumo_horno_micro_cafetera_pzem_004t_v3_power',
+            'sensor.lavavajillas_power',
+            'sensor.lavadora_sonoff_pow_power',
+            'sensor.aire_acondicionado_power',
+            'sensor.taller_consumo_taller_potencia',
+            'sensor.consumo_electrodomesticos_no_medibles'
+          ] %}
+          {{ fuentes | map('states') | map('float', 0) | sum | round(0) }}
+
+      # Lo que no tiene medidor = circuito total (EM 244cab ch2) - medido
+      - name: Consumo No Medido
+        unique_id: pkg_energia_consumo_no_medido
+        default_entity_id: sensor.consumo_no_medido
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        icon: mdi:help-circle-outline
+        availability: "{{ has_value('sensor.shellyem_244cab418bca_channel_2_power') }}"
+        state: >
+          {{ [states('sensor.shellyem_244cab418bca_channel_2_power') | float
+              - states('sensor.consumo_medido') | float(0), 0] | max | round(0) }}
+
+# -----------------------------------------------------------------------------
+# ENERGÍA para dispositivos que solo dan potencia (Riemann).
+# Si alguno tiene `_energy` nativo, borra su bloque y usa el nativo.
+# max_sub_interval: fuerza actualización aunque la potencia no cambie
+# (sin él, un aparato apagado deja el contador "congelado" en el panel).
+# -----------------------------------------------------------------------------
+sensor:
+  - platform: integration
+    source: sensor.radiador_cocina_power
+    name: Energia Radiador Cocina
+    unique_id: pkg_energia_radiador_cocina_kwh
+    unit_prefix: k
+    method: left
+    round: 3
+    max_sub_interval:
+      minutes: 5
+
+  - platform: integration
+    source: sensor.radiador_salita_power
+    name: Energia Radiador Salita
+    unique_id: pkg_energia_radiador_salita_kwh
+    unit_prefix: k
+    method: left
+    round: 3
+    max_sub_interval:
+      minutes: 5
+
+  - platform: integration
+    source: sensor.lavavajillas_power
+    name: Energia Lavavajillas
+    unique_id: pkg_energia_lavavajillas_kwh
+    unit_prefix: k
+    method: left
+    round: 3
+    max_sub_interval:
+      minutes: 5
+
+  - platform: integration
+    source: sensor.lavadora_sonoff_pow_power
+    name: Energia Lavadora
+    unique_id: pkg_energia_lavadora_kwh
+    unit_prefix: k
+    method: left
+    round: 3
+    max_sub_interval:
+      minutes: 5
+
+  - platform: integration
+    source: sensor.secadora_switch_0_power
+    name: Energia Secadora
+    unique_id: pkg_energia_secadora_kwh
+    unit_prefix: k
+    method: left
+    round: 3
+    max_sub_interval:
+      minutes: 5
+
+  - platform: integration
+    source: sensor.vitroceramica_power
+    name: Energia Vitroceramica
+    unique_id: pkg_energia_vitroceramica_kwh
+    unit_prefix: k
+    method: left
+    round: 3
+    max_sub_interval:
+      minutes: 5
+
+  - platform: integration
+    source: sensor.consumo_horno_micro_cafetera_pzem_004t_v3_power
+    name: Energia Horno Micro Cafetera
+    unique_id: pkg_energia_horno_micro_cafetera_kwh
+    unit_prefix: k
+    method: left
+    round: 3
+    max_sub_interval:
+      minutes: 5
+
+  - platform: integration
+    source: sensor.frigorifico_blitzwolf_shp6_04_power
+    name: Energia Frigorifico
+    unique_id: pkg_energia_frigorifico_kwh
+    unit_prefix: k
+    method: left
+    round: 3
+    max_sub_interval:
+      minutes: 5
+
+  - platform: integration
+    source: sensor.luces_escalera_power
+    name: Energia Luces Escalera
+    unique_id: pkg_energia_luces_escalera_kwh
+    unit_prefix: k
+    method: left
+    round: 3
+    max_sub_interval:
+      minutes: 5
+
+  - platform: integration
+    source: sensor.consumo_no_medido
+    name: Energia Consumo No Medido
+    unique_id: pkg_energia_no_medido_kwh
+    unit_prefix: k
+    method: left
+    round: 3
+    max_sub_interval:
+      minutes: 5

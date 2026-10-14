@@ -1,0 +1,147 @@
+# =============================================================================
+# packages/energia_calculos.yaml
+# -----------------------------------------------------------------------------
+# Sensores DERIVADOS: solo leen sensores de energia_base.yaml.
+# Si cambias un equipo, solo se toca energia_base.yaml.
+# =============================================================================
+
+input_number:
+  capacidad_bateria_kwh:
+    name: Capacidad batería
+    min: 0
+    max: 60
+    step: 0.1
+    unit_of_measurement: kWh
+    icon: mdi:battery-high
+    mode: box
+    initial: 30          # quita `initial` si quieres que conserve el valor tras reinicio
+
+template:
+  - sensor:
+
+      # -----------------------------------------------------------------------
+      # PRODUCCIÓN SOLAR TOTAL
+      # -----------------------------------------------------------------------
+      - name: Potencia FV Total
+        unique_id: pkg_energia_potencia_fv_total
+        default_entity_id: sensor.potencia_fv_total
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ has_value('sensor.potencia_fv_sma') or has_value('sensor.potencia_fv_mppt') }}"
+        state: >
+          {{ (states('sensor.potencia_fv_sma') | float(0)
+            + states('sensor.potencia_fv_mppt') | float(0)) | round(0) }}
+
+      - name: Energia FV Total Diaria
+        unique_id: pkg_energia_fv_total_diaria
+        default_entity_id: sensor.energia_fv_total_diaria
+        unit_of_measurement: kWh
+        device_class: energy
+        state_class: total_increasing
+        availability: "{{ has_value('sensor.energia_fv_sma_diaria') and has_value('sensor.energia_fv_mppt_diaria') }}"
+        state: >
+          {{ (states('sensor.energia_fv_sma_diaria') | float
+            + states('sensor.energia_fv_mppt_diaria') | float) | round(3) }}
+
+      # -----------------------------------------------------------------------
+      # BATERÍA: energía almacenada
+      # energy_storage = energía almacenada (no es un contador)
+      # -----------------------------------------------------------------------
+      - name: Capacidad Restante Bateria
+        unique_id: pkg_energia_capacidad_restante_bateria
+        default_entity_id: sensor.capacidad_restante_bateria
+        unit_of_measurement: kWh
+        device_class: energy_storage
+        state_class: measurement
+        availability: "{{ has_value('sensor.soc_bateria') }}"
+        state: >
+          {{ (states('input_number.capacidad_bateria_kwh') | float(30)
+             * states('sensor.soc_bateria') | float / 100) | round(1) }}
+
+      - name: Capacidad Disponible Bateria
+        unique_id: pkg_energia_capacidad_disponible_bateria
+        default_entity_id: sensor.capacidad_disponible_bateria
+        unit_of_measurement: kWh
+        device_class: energy_storage
+        state_class: measurement
+        availability: "{{ has_value('sensor.capacidad_restante_bateria') }}"
+        state: >
+          {{ (states('input_number.capacidad_bateria_kwh') | float(30)
+             - states('sensor.capacidad_restante_bateria') | float) | round(1) }}
+
+      # -----------------------------------------------------------------------
+      # AUTOCONSUMO / EXCEDENTE SOLAR
+      # Ojo: Excedente Aprovechable incluye lo que entra a batería.
+      # -----------------------------------------------------------------------
+      - name: Autoconsumo Solar
+        unique_id: pkg_energia_autoconsumo_solar
+        default_entity_id: sensor.autoconsumo_solar
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ has_value('sensor.potencia_fv_total') and has_value('sensor.consumo_casa') }}"
+        state: >
+          {{ [states('sensor.potencia_fv_total') | float,
+              states('sensor.consumo_casa') | float] | min | round(0) }}
+
+      - name: Excedente Aprovechable
+        unique_id: pkg_energia_excedente_aprovechable
+        default_entity_id: sensor.excedente_aprovechable
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ has_value('sensor.potencia_fv_total') and has_value('sensor.consumo_casa') }}"
+        state: >
+          {{ [states('sensor.potencia_fv_total') | float
+              - states('sensor.consumo_casa') | float, 0] | max | round(0) }}
+
+      # -----------------------------------------------------------------------
+      # REPARTO DEL CONSUMO (%): Solar + Batería + Red = 100
+      # -----------------------------------------------------------------------
+      - name: Participacion Red
+        unique_id: pkg_energia_participacion_red
+        default_entity_id: sensor.participacion_red
+        unit_of_measurement: "%"
+        state_class: measurement
+        icon: mdi:transmission-tower
+        availability: "{{ has_value('sensor.consumo_red') and has_value('sensor.consumo_casa') }}"
+        state: >
+          {% set c = states('sensor.consumo_casa') | float %}
+          {{ ([states('sensor.consumo_red') | float / c * 100, 100] | min) | round(1) if c > 0 else 0 }}
+
+      - name: Participacion Bateria
+        unique_id: pkg_energia_participacion_bateria
+        default_entity_id: sensor.participacion_bateria
+        unit_of_measurement: "%"
+        state_class: measurement
+        icon: mdi:home-battery
+        availability: "{{ has_value('sensor.descarga_bateria') and has_value('sensor.consumo_casa') }}"
+        state: >
+          {% set c = states('sensor.consumo_casa') | float %}
+          {{ ([states('sensor.descarga_bateria') | float / c * 100, 100] | min) | round(1) if c > 0 else 0 }}
+
+      - name: Participacion Solar
+        unique_id: pkg_energia_participacion_solar
+        default_entity_id: sensor.participacion_solar
+        unit_of_measurement: "%"
+        state_class: measurement
+        icon: mdi:solar-power
+        availability: "{{ has_value('sensor.participacion_red') and has_value('sensor.participacion_bateria') }}"
+        state: >
+          {{ [100 - states('sensor.participacion_red') | float
+                  - states('sensor.participacion_bateria') | float, 0] | max | round(1) }}
+
+      # -----------------------------------------------------------------------
+      # ESTADO BATERÍA (umbral ±50 W para evitar parpadeo)
+      # -----------------------------------------------------------------------
+      - name: Estado Bateria
+        unique_id: pkg_energia_estado_bateria
+        default_entity_id: sensor.estado_bateria
+        availability: "{{ has_value('sensor.potencia_bateria') }}"
+        icon: >
+          {% set p = states('sensor.potencia_bateria') | float(0) %}
+          {{ 'mdi:battery-charging' if p > 50 else 'mdi:battery-arrow-down' if p < -50 else 'mdi:battery' }}
+        state: >
+          {% set p = states('sensor.potencia_bateria') | float %}
+          {{ 'Cargando' if p > 50 else 'Descargando' if p < -50 else 'Reposo' }}
