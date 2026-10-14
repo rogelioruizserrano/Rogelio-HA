@@ -19,7 +19,6 @@
 #   sensor.termo_50l_switch_0_energy
 #   sensor.shelly1pm_68c63afb367a_energy          (termo 100 L)
 #   sensor.taller_consumo_taller_energia
-#   sensor.v2c_trydan_charging_energy
 #   sensor.shellyem_e45b47_channel_1_energy       (línea enchufes)
 #   sensor.shellyem_e45b47_channel_2_energy
 #   sensor.shellyplug_s_3ce90ee04758_energy
