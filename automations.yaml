@@ -1122,7 +1122,7 @@
       state: KEEP_BATTERIES_CHARGED
     - condition: state
       entity_id: sensor.gx_device_ac_active_input_source
-      state: GRID
+      state: grid
   actions:
   - target:
       entity_id: number.gx_device_ess_max_charge_current
@@ -1420,7 +1420,7 @@
       sequence:
       - target:
           entity_id:
-          - light.lampara_techo_entradita
+          - light.luz_entradita
           - light.lampara_escalera_bajo
           - light.lampara_escalera_hall
           - light.lampara_techo_cine
@@ -1492,7 +1492,7 @@
         metadata: {}
         data: {}
         target:
-          entity_id: light.luz_de_taller
+          entity_id: light.luz_taller
       alias: Luz taller
     - conditions:
       - condition: template
@@ -2321,7 +2321,8 @@
     - conditions:
       - condition: state
         entity_id: sensor.gx_device_ac_active_input_source
-        state: NOT_CONNECTED
+        state:
+        - not_connected
       sequence:
       - action: switch.turn_off
         data: {}
@@ -2341,7 +2342,8 @@
         conditions:
         - condition: state
           entity_id: sensor.gx_device_ac_active_input_source
-          state: GRID
+          state:
+          - grid
         - condition: time
           after: '23:00:00'
           before: 06:30:00
@@ -2369,7 +2371,8 @@
         conditions:
         - condition: state
           entity_id: sensor.gx_device_ac_active_input_source
-          state: GRID
+          state:
+          - grid
         - condition: time
           after: '23:00:00'
           before: 06:30:00
@@ -2386,7 +2389,8 @@
         conditions:
         - condition: state
           entity_id: sensor.gx_device_ac_active_input_source
-          state: GRID
+          state:
+          - grid
         - condition: time
           after: 06:30:00
           before: '23:00:00'
@@ -2407,7 +2411,8 @@
         conditions:
         - condition: state
           entity_id: sensor.gx_device_ac_active_input_source
-          state: NOT_CONNECTED
+          state:
+          - not_connected
         - condition: time
           after: 09:00:00
           before: '22:00:00'
@@ -2431,7 +2436,8 @@
         conditions:
         - condition: state
           entity_id: sensor.gx_device_ac_active_input_source
-          state: NOT_CONNECTED
+          state:
+          - not_connected
         - condition: time
           after: '22:00:00'
           before: 09:00:00
@@ -2452,7 +2458,8 @@
         conditions:
         - condition: state
           entity_id: sensor.gx_device_ac_active_input_source
-          state: GRID
+          state:
+          - grid
         - condition: time
           after: 09:00:00
           before: '22:00:00'
@@ -2478,7 +2485,8 @@
         conditions:
         - condition: state
           entity_id: sensor.gx_device_ac_active_input_source
-          state: GRID
+          state:
+          - grid
         - condition: time
           after: '22:00:00'
           before: 09:00:00
@@ -2829,7 +2837,6 @@
     data: {}
     target:
       entity_id:
-      - light.lampara_techo_entradita
       - light.lampara_techo_cine
       - light.wled
       - light.ventilador_salita
@@ -2838,12 +2845,16 @@
       - light.luz_dormitorio_principal_switch_0
       - light.luz_cocina
       - light.luz_bano
-      - light.lampara_techo_despensa
       - light.led_tv_salita_rgbw_light_0
-      - light.luz_de_taller
       - light.luz_pasillo_switch_0
       - light.shellyplusrgbwpm_30c922570a00
       - light.lamparita_de_lectura_lampara_lectura_rakel
+      - light.luz_entradita
+      - light.shelly1mini_6055f99873c4_switch_0
+      - light.luz_puerta_azotea
+      - light.luz_principal
+      - light.led_salon
+      - light.luz_taller
   - action: switch.turn_off
     metadata: {}
     data: {}

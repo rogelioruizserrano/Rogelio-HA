@@ -180,11 +180,11 @@
   
     availability: >
       {{ has_value('sensor.red_diario')
-         and has_value('sensor.grid_fossil_fuel_percentage') }}
+         and has_value('sensor.electricity_maps_porcentaje_de_combustibles_fosiles_de_la_red') }}
   
     state: >
       {% set red = states('sensor.red_diario') | float(0) %}
-      {% set fosil = states('sensor.grid_fossil_fuel_percentage') | float(0) %}
+      {% set fosil = states('sensor.electricity_maps_porcentaje_de_combustibles_fosiles_de_la_red') | float(0) %}
       {{ (red - ((red / 100) * fosil)) | round(0) }}
   - unit_of_measurement: W
     device_class: power
@@ -243,18 +243,14 @@
     state_class: measurement
     default_entity_id: sensor.consumo_medible
     name: Consumo de la casa medible
-    state: '{{ ((states(''sensor.bano_interior_sensor_power'')|float(default=0)) +
-      (states(''sensor.radiador_cocina_power'')|float(default=0)) + (states(''sensor.radiador_salita_power'')|float(default=0))
-      + (states(''sensor.sensor.enchufe_artillery_x1_power'')|float(default=0)) +
-      (states(''sensor.sensor.enchufe_ender_3_power'')|float(default=0)) + (states(''sensor.sensor.enchufe_blv_power'')|float(default=0))
-      + (states(''sensor.luces_escalera_power'')|float(default=0)) + (states(''sensor.rele_doble_escalera_bajo_power'')|float(default=0))
-      + (states(''sensor.termo_50l_switch_0_power'')|float(default=0)) + (states(''sensor.switch_termo_100l_00_00_00_cuartillo_azotea_interior_power'')|float(default=0))
+    state: '{{ ((states(''sensor.radiador_cocina_power'')|float(default=0)) + (states(''sensor.radiador_salita_power'')|float(default=0))
+      + (states(''sensor.luces_escalera_power'')|float(default=0)) + (states(''sensor.termo_50l_switch_0_power'')|float(default=0)) + (states(''sensor.switch_termo_100l_00_00_00_cuartillo_azotea_interior_power'')|float(default=0))
       + (states(''sensor.consumo_electrodomesticos_no_medibles'')|float(default=0))
       + (states(''sensor.armario_red_power'')|float(default=0)) + (states(''sensor.shellyem_e45b47_channel_1_power'')|float(default=0))
       + (states(''sensor.shellyem_e45b47_channel_2_power'')|float(default=0)) + (states(''sensor.vitroceramica_power'')|float(default=0))
       + (states(''sensor.secadora_switch_0_power'')|float(default=0)) + (states(''sensor.consumo_horno_micro_cafetera_pzem_004t_v3_power'')|float(default=0))
       + (states(''sensor.lavavajillas_power'')|float(default=0)) + (states(''sensor.lavadora_sonoff_pow_power'')|float(default=0))
-      + (states(''sensor.aire_acondicionado_power'')|float(default=0)) + (states(''sensor.consumo_taller_consumo_taller_power'')|float(default=0)))|round(2,
+      + (states(''sensor.aire_acondicionado_power'')|float(default=0)) + (states(''sensor.taller_consumo_taller_potencia'')|float(default=0)))|round(2,
       default=0.0) }}'
 
   - unit_of_measurement: W
