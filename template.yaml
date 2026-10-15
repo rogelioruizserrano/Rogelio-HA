@@ -1,5 +1,4 @@
 - sensor:
-
   - name: red
     unique_id: red_import
     unit_of_measurement: W
@@ -7,12 +6,11 @@
     state_class: measurement
     state: '{% set p = states(''sensor.shellyem_244cab418bca_channel_1_power'') |
       float(0) %} {{ (p | round(0)) if p > 0 else 0 }}
-
       '
     availability: '{{ has_value(''sensor.shellyem_244cab418bca_channel_1_power'')
       }}
-
       '
+
   - name: excedentes
     unique_id: red_export
     unit_of_measurement: W
@@ -20,24 +18,30 @@
     state_class: measurement
     state: '{% set p = states(''sensor.gx_device_grid_power_l1'') |
       float(0) %} {{ ((p * -1) | round(0)) if p < 0 else 0 }}
-
       '
     availability: '{{ has_value(''sensor.gx_device_grid_power_l1'')
       }}
-
       '
-  - default_entity_id: sensor.tiempo_en_segundos
-    name: Tiempo en segundos
-    state: '{{ states(''sensor.smartshunt_time_to_go'') | int }}'
-  - default_entity_id: sensor.tiempo_en_minutos
-    name: Tiempo en minutos
-    state: '{{ (states(''sensor.smartshunt_time_to_go'') | int / 60) | round(0)
-      }}'
-  - default_entity_id: sensor.tiempo_formateado
-    name: Tiempo formateado
-    state: '{% set seconds = states(''sensor.smartshunt_time_to_go'') | int %}
-      {{ ''%02d:%02d:%02d'' | format(seconds // 3600, (seconds % 3600) // 60, seconds
-      % 60) }}'
+      
+  - name: "Tiempo en segundos"
+    unique_id: tiempo_en_segundos
+    unit_of_measurement: s
+    availability: "{{ has_value('sensor.smartshunt_time_to_go') }}"
+    state: "{{ states('sensor.smartshunt_time_to_go') | int(0) }}"
+
+  - name: "Tiempo en minutos"
+    unique_id: tiempo_en_minutos
+    unit_of_measurement: min
+    availability: "{{ has_value('sensor.smartshunt_time_to_go') }}"
+    state: "{{ (states('sensor.smartshunt_time_to_go') | int(0) / 60) | round(0) }}"
+
+  - name: "Tiempo formateado"
+    unique_id: tiempo_formateado
+    availability: "{{ has_value('sensor.smartshunt_time_to_go') }}"
+    state: >
+      {% set s = states('sensor.smartshunt_time_to_go') | int(0) %}
+      {{ '%02d:%02d:%02d' | format(s // 3600, (s % 3600) // 60, s % 60) }}
+      
   - unique_id: hora_fin_bateria
     default_entity_id: sensor.hora_fin_bateria
     icon: mdi:clock
@@ -143,21 +147,23 @@
     name: Precio de los excedentes en € al mes
     state: '{{ (( states(''sensor.excedentes_mensual'')|float(0)) * (states(''sensor.precio_electricidad_tramos_excedentes'')|float(0)))  |
       round(2) }}'
-  - unit_of_measurement: W
+  - unique_id: bateria_carga
+    unit_of_measurement: W
     device_class: power
     state_class: measurement
     default_entity_id: sensor.bateria_carga
     state: "{% set valor = states('sensor.gx_device_dc_battery_power') | float(0) %} {%\
       \ if valor > 0 %}\n  {{ valor }}\n{% else %}\n  0\n{% endif %}"
+    availability: "{{ has_value('sensor.gx_device_dc_battery_power') }}"
     name: bateria_carga
   - unit_of_measurement: W
+    unique_id: bateria_carga_mas_mppt
     device_class: power
     state_class: measurement
     default_entity_id: sensor.bateria_carga_mas_mppt
     state: '{{ states(''sensor.bateria_carga'')|float(default=0) + ((states(''sensor.gx_device_dc_battery_power'')|float(default=0)))|round(0,
       default=0.00)  }}'
     name: bateria_carga_mas_mppt
-    device_class: power
   - unit_of_measurement: W
     device_class: power
     state_class: measurement

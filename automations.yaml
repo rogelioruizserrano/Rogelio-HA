@@ -2069,6 +2069,12 @@
     - binary_sensor.sensor_presencia_moving_target
     - binary_sensor.sensor_presencia_presence
     - binary_sensor.puerta_principal_contact
+    not_from:
+    - unavailable
+    - unknown
+    not_to:
+    - unavailable
+    - unknown
   conditions: []
   actions:
   - choose:
@@ -2191,6 +2197,7 @@
           - light.luz_puerta_raquel
           - light.luz_puerta_yolanda
           - light.luces_escalera
+        continue_on_error: true
         data: {}
         enabled: true
       alias: Apagado
@@ -4413,49 +4420,6 @@
   - action: lock.lock
     target:
       entity_id: lock.puerta_principal
-  mode: single
-- id: control_ac_temperatura_real
-  alias: A/C - Ajuste por temperatura real
-  description: 'Cada 15 min compara la temperatura media de la casa con el objetivo
-    y ajusta la consigna del A/C en pasos de 0.5°C.
-
-    '
-  triggers:
-  - trigger: time_pattern
-    minutes: /15
-  conditions:
-  - condition: state
-    entity_id: input_select.modo_a_c
-    state: Temperatura real
-  - condition: not
-    conditions:
-    - condition: state
-      entity_id: climate.casa
-      state: 'off'
-  - condition: template
-    value_template: "{{ states('sensor.temperatura_media_en_casa') not in ['unknown',
-      'unavailable']\n   and states('input_number.objetivo_temperatura') not in ['unknown',
-      'unavailable']\n   and state_attr('climate.casa', 'temperature') is not none
-      }}\n"
-  - condition: template
-    value_template: "{{ (states('sensor.temperatura_media_en_casa') | float(0)\n    -
-      states('input_number.objetivo_temperatura') | float(0)) | abs > 0.3 }}\n"
-  actions:
-  - variables:
-      t_media: '{{ states(''sensor.temperatura_media_en_casa'') | float(0) }}'
-      t_objetivo: '{{ states(''input_number.objetivo_temperatura'') | float(0) }}'
-      consigna_actual: '{{ state_attr(''climate.casa'', ''temperature'') | float(0)
-        }}'
-      consigna_nueva: "{% if t_media > t_objetivo %}\n  {{ consigna_actual - 0.5 }}\n{%
-        else %}\n  {{ consigna_actual + 0.5 }}\n{% endif %}\n"
-      consigna_final: '{{ [20, [consigna_nueva | float, 28] | min] | max }}'
-  - condition: template
-    value_template: '{{ consigna_final | float != consigna_actual }}'
-  - action: climate.set_temperature
-    target:
-      entity_id: climate.casa
-    data:
-      temperature: '{{ consigna_final }}'
   mode: single
 - id: control_ac_temperatura_real
   alias: A/C - Ajuste por temperatura real

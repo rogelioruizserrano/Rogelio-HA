@@ -38,6 +38,7 @@ include:
     - sensor.excedentes_mensual
     - sensor.ratio_consumo_excedentes
     - sensor.multiplus_ii_48_5000_70_50_id_276_energy_from_ac_out_to_ac_in_1
+    - sensor.shellyem_244cab418bca_channel_1_energy_returned
 
     # ===== Solar / PV (Solcast) =====
     - sensor.forecast_remaining_today
@@ -209,6 +210,12 @@ include:
     - sensor.vitroceramica_diario
     - sensor.vitroceramica_mensual
     - sensor.vitroceramica_power
+    - sensor.frigorifico_energia
+    - sensor.frigorifico_potencia
+    - sensor.cafetera_energia
+    - sensor.cafetera_potencia
+    - sensor.plancha_energia
+    - sensor.plancha_potencia
     - switch.lavadora_sonoff_pow_relay
     - switch.lavavajillas
     - switch.secadora_switch_0

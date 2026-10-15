@@ -17,12 +17,12 @@
 # Integraciones (Riemann sum) — convierten potencia (W) en energía (kWh)
 # -----------------------------------------------------------------------------
 
-- platform: integration
-  source: sensor.red
-  name: consumo_de_la_red
-  unit_prefix: k
-  method: left
-  round: 0
+#- platform: integration
+#  source: sensor.red
+#  name: consumo_de_la_red
+#  unit_prefix: k
+#  method: left
+#  round: 0
 
 - platform: integration
   source: sensor.bateria_carga_mas_mppt
