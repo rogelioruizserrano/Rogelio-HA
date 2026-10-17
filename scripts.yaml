@@ -127,3 +127,176 @@ aviso_ducha_led_bano:
   - action: scene.turn_on
     target:
       entity_id: scene.led_bano_pre_alerta
+jarvis_hablar:
+  alias: Jarvis · hablar
+  description: Genera un aviso con el estilo de Jarvis y lo dice por los altavoces.
+  icon: mdi:robot-happy
+  mode: parallel
+  max: 10
+  fields:
+    situacion:
+      name: Situación
+      description: Qué ha pasado, contado de forma objetiva. Contexto para la IA.
+      example: El consumo de la red ha llegado a 6100 vatios.
+      selector:
+        text:
+          multiline: true
+    peticion:
+      name: Petición
+      description: Lo que tiene que hacer el destinatario (opcional).
+      example: que apague algún aparato
+      selector:
+        text:
+    datos:
+      name: Datos
+      description: Cifras o detalles que Jarvis puede citar (opcional).
+      example: 'Humedad del baño: 78 %'
+      selector:
+        text:
+          multiline: true
+    tono:
+      name: Tono
+      description: aleatorio, informativo, aviso o urgente.
+      default: aleatorio
+      selector:
+        select:
+          options:
+          - aleatorio
+          - informativo
+          - aviso
+          - urgente
+    destinatario:
+      name: Destinatario
+      description: Cómo se dirige Jarvis a quien escucha.
+      default: señor
+      example: señora Raquel
+      selector:
+        text:
+    fallback:
+      name: Texto de respaldo
+      description: Se dice si la IA falla, o siempre si generar = false.
+      required: true
+      selector:
+        text:
+          multiline: true
+    generar:
+      name: Generar con IA
+      default: true
+      selector:
+        boolean:
+    altavoces:
+      name: Altavoces
+      description: Si se omite, usa los altavoces por defecto.
+      selector:
+        entity:
+          domain: media_player
+          multiple: true
+    solo_de_dia:
+      name: Solo de día
+      description: No habla fuera del horario de voz (09:00-22:00).
+      default: false
+      selector:
+        boolean:
+    max_frases:
+      name: Máximo de frases
+      default: 2
+      selector:
+        number:
+          min: 1
+          max: 6
+  variables:
+    tts_entity: tts.elevenlabs_texto_a_voz
+    ai_entity: ai_task.openai_ai_task
+    altavoces_defecto:
+    - media_player.hilo_musical
+    - media_player.dormitorio
+    hora_inicio_voz: 09:00
+    hora_fin_voz: '22:00'
+    persona: 'Eres J.A.R.V.I.S., el asistente de inteligencia artificial de la casa,
+      y hablas exactamente como en las películas de Iron Man cuando te diriges a Tony
+      Stark. Personalidad: mayordomo británico digital, formal, impecable, sereno
+      y leal, con humor seco e ironía educada casi imperceptible. Nunca pierdes la
+      compostura ni levantas la voz. Señalas los descuidos con elegancia, a veces
+      dando a entender que ya lo veías venir, pero siempre con respeto y afecto. Usas
+      vocabulario técnico y preciso, como si informaras del estado de los sistemas
+      de la casa, y fórmulas corteses como le sugiero, me permito recordarle, si me
+      lo permite, quizá convendría o no quisiera alarmarle, pero. El humor es por
+      understatement británico: quitar importancia a lo evidente o exagerar con total
+      seriedad. No cites frases literales de las películas: crea frases nuevas con
+      ese estilo.'
+    registros:
+    - informe de estado de sistemas, preciso y con datos
+    - ironía británica contenida, casi imperceptible
+    - preocupación educada, como quien sugiere sin insistir
+    - observación seca sobre lo evidente, con elegancia
+    - recordatorio diplomático de que ya lo había advertido
+    - parte técnico con una apostilla sarcástica final
+    tonos:
+      informativo: informe sereno y preciso, sin dramatismo, con una nota de humor
+        seco
+      aviso: sugerencia cortés pero clara, con ironía educada
+      urgente: urgencia contenida, como Jarvis informando de un fallo crítico en plena
+        misión; sereno y directo, la ironía queda en segundo plano
+    tono_final: '{{ tono | default(''aleatorio'') }}'
+    descripcion_tono: '{{ tonos[tono_final] if tono_final in tonos else registros
+      | random }}'
+    quien: '{{ destinatario | default(''señor'', true) }}'
+    lista_altavoces: '{% set a = altavoces | default([], true) %} {{ ([a] if a is
+      string else a | list) if a else altavoces_defecto }}'
+    en_horario: '{{ today_at(hora_inicio_voz) <= now() < today_at(hora_fin_voz) }}'
+  sequence:
+  - condition: template
+    value_template: '{{ not (solo_de_dia | default(false)) or en_horario }}'
+  - variables:
+      ai_msg: {}
+  - if:
+    - condition: template
+      value_template: '{{ generar | default(true) and situacion | default('''') |
+        trim != '''' }}'
+    then:
+    - action: ai_task.generate_data
+      continue_on_error: true
+      data:
+        entity_id: '{{ ai_entity }}'
+        task_name: jarvis_hablar
+        instructions: '{{ persona }}
+
+          Te diriges a: {{ quien }}. Trátale siempre de usted y llámale {{ quien }},
+          al principio o al final de la frase.
+
+          Situación: {{ situacion }}
+
+          {% if datos | default('''') | trim != '''' %}Datos disponibles: {{ datos
+          }}{% endif %}
+
+          {% if peticion | default('''') | trim != '''' %}Lo que hay que pedirle:
+          {{ peticion }}. Debe quedar claro.{% endif %}
+
+          Tono para este mensaje: {{ descripcion_tono }}.
+
+          Requisitos: español de España. Máximo {{ max_frases | default(2) }} frases
+          cortas. Debe sonar natural leído en voz alta. Di las cifras con su unidad
+          en palabras (vatios, grados, por ciento), nunca con símbolos. Sin comillas,
+          asteriscos, emojis ni siglas. Sin explicaciones fuera del mensaje.
+
+          '
+      response_variable: ai_msg
+  - variables:
+      mensaje: "{% if ai_msg.data is defined and ai_msg.data is string\n      and
+        ai_msg.data | trim != '' %}{{ ai_msg.data | trim }}{% else %}{{ fallback }}{%
+        endif %}"
+  - action: tts.speak
+    continue_on_error: true
+    target:
+      entity_id: '{{ tts_entity }}'
+    data:
+      cache: false
+      media_player_entity_id: '{{ lista_altavoces }}'
+      message: '{{ mensaje }}'
+      language: es
+  - variables:
+      resultado:
+        mensaje: '{{ mensaje }}'
+        generado_por_ia: '{{ mensaje != fallback }}'
+  - stop: Mensaje reproducido
+    response_variable: resultado

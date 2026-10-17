@@ -14,6 +14,8 @@
 #   binary_sensor.puerta_del_bano_window  BLU Door/Window puerta  (on = abierta)
 #   binary_sensor.ventana_bano_ventana    BLU Door/Window ventana (on = abierta)
 #
+# Requiere el package jarvis_voz.yaml (script.jarvis_hablar)
+#
 # Script del Shelly: id 1 -> URL /script/1/ha (ajustar si es otro)
 #
 # Reparto del control:
@@ -226,7 +228,7 @@ script:
   #   tipo = abrir_ventana    -> A/C encendido: abrir la ventana (la puerta no vale,
   #                              el extractor se llevaría el aire climatizado)
   extractor_bano_aviso_ventilacion:
-    alias: "Extractor baño · aviso de ventilación (IA)"
+    alias: "Extractor baño · aviso de ventilación (Jarvis)"
     icon: mdi:account-voice
     mode: single
     max_exceeded: silent
@@ -241,90 +243,38 @@ script:
             options:
               - abrir_ventana
               - ventana_o_puerta
-    variables:
-      estilos:
-        - narrador deportivo
-        - presentador de telediario
-        - documental de naturaleza
-        - tráiler de película épica
-        - anuncio de teletienda
-        - parte meteorológico
-        - operador de atención al cliente
-        - investigador privado
-      situacion: >-
-        {%- if tipo == 'abrir_ventana' -%}
-        Alguien acaba de salir del baño. El aire acondicionado de la casa está
-        encendido y la ventana del baño está cerrada, así que el extractor se está
-        llevando el aire fresco de la casa en lugar de aire de la calle.
-        {%- else -%}
-        Alguien acaba de salir del baño y ha cerrado la puerta con la ventana
-        también cerrada, así que el extractor no tiene por dónde coger aire y no
-        puede sacar la humedad.
-        {%- endif -%}
-      peticion: >-
-        {%- if tipo == 'abrir_ventana' -%}
-        que abran la ventana del baño
-        {%- else -%}
-        que abran la ventana del baño o dejen la puerta del baño abierta
-        {%- endif -%}
-      aviso_fallback: >-
-        {%- if tipo == 'abrir_ventana' -%}
-        Atención. El aire acondicionado está encendido y la ventana del baño está
-        cerrada. Abrid la ventana para que el extractor no se lleve el aire fresco
-        de la casa.
-        {%- else -%}
-        Atención. La puerta y la ventana del baño están cerradas y el extractor no
-        tiene por dónde coger aire. Abrid la ventana o dejad la puerta abierta.
-        {%- endif -%}
     sequence:
-      - variables:
-          ai_message: {}
-          estilo: "{{ estilos | random }}"
-      - action: ai_task.generate_data
-        continue_on_error: true
+      - action: script.jarvis_hablar
         data:
-          entity_id: ai_task.openai_ai_task
-          task_name: aviso_extractor_bano
-          instructions: >
-            Genera un aviso corto para reproducir por voz en una vivienda.
-
-            Situación: {{ situacion }}
-
-            Lo que hay que pedir: {{ peticion }}.
-
-            Estilo narrativo obligatorio para este mensaje: {{ estilo }}.
-
-            Requisitos:
-
-            - Español de España. Máximo 2 frases cortas.
-
-            - Deja claro qué hay que hacer: {{ peticion }}.
-
-            - Humor inteligente, ironía o sarcasmo suave: baño convertido en sauna,
-              extractor ahogándose, humedad okupa o similar.
-
-            - Debe sonar natural leído en voz alta.
-
-            - Sin emojis, sin comillas y sin explicaciones fuera del mensaje.
-        response_variable: ai_message
-      - variables:
-          mensaje: |-
-            {% if ai_message.data is defined and ai_message.data is string
-                  and ai_message.data | trim != '' %}
-              {{ ai_message.data | trim }}
-            {% else %}
-              {{ aviso_fallback }}
-            {% endif %}
-      - action: tts.speak
-        target:
-          entity_id: tts.openai_tts_openai_tts_gpt_40_mini
-        data:
-          cache: false
-          media_player_entity_id:
+          altavoces:
             - media_player.bano
             - media_player.google_nest_hub_cocina
-          message: "{{ mensaje }}"
-          language: es
+          tono: aviso
+          datos: "Humedad del baño: {{ states('sensor.temperatura_bano_humidity') | int(0) }} por ciento"
+          situacion: >-
+            {%- if tipo == 'abrir_ventana' -%}
+            Acaban de salir del baño. El aire acondicionado de la casa está
+            encendido y la ventana del baño está cerrada, así que el extractor se
+            está llevando el aire climatizado de la casa en lugar de aire de la calle.
+            {%- else -%}
+            Acaban de salir del baño y la puerta y la ventana han quedado cerradas,
+            así que el extractor no tiene por dónde coger aire y no puede sacar la
+            humedad.
+            {%- endif -%}
+          peticion: >-
+            {%- if tipo == 'abrir_ventana' -%}
+            que abra la ventana del baño
+            {%- else -%}
+            que abra la ventana del baño o deje la puerta abierta
+            {%- endif -%}
+          fallback: >-
+            {%- if tipo == 'abrir_ventana' -%}
+            Señor, el aire acondicionado está encendido y la ventana del baño sigue
+            cerrada. Le sugiero abrirla, a menos que pretenda climatizar la calle.
+            {%- else -%}
+            Señor, la puerta y la ventana del baño están cerradas y el extractor no
+            tiene por dónde respirar. Le recomendaría abrir una de las dos.
+            {%- endif -%}
 
 # ------------------------------------------------------------
 # AUTOMATIZACIONES

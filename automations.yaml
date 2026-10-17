@@ -273,7 +273,9 @@
   - variables:
       potencia: '{{ states(''sensor.red_total'') | float(0) | round(0) | int }}'
       horario_voz: '{{ today_at(''09:00'') <= now() < today_at(''22:00'') }}'
-      instrucciones: ''
+      situacion: ''
+      peticion: ''
+      tono: aviso
       fallback: ''
       apagados: []
   - choose:
@@ -359,14 +361,20 @@
                 critical: 1
                 volume: 1
       - variables:
-          instrucciones: 'Escribe un aviso de emergencia con humor exagerado y dramático:
-            el consumo eléctrico ha llegado a {{ potencia }} vatios. {% if apagados
-            | count > 0 %}Para que no salten los plomos se han apagado automáticamente:
-            {{ nombres_apagados }}. Menciónalos. {% else %}Pide que apaguen aparatos
-            ya mismo.{% endif %} {{ reglas_voz }}'
-          fallback: Atención. Consumo eléctrico crítico de {{ potencia }} vatios.
-            {% if apagados | count > 0 %}Se ha apagado {{ nombres_apagados }}. {%
-            else %}Apagad aparatos inmediatamente.{% endif %}
+          tono: urgente
+          situacion: 'Alerta crítica: el consumo de la red ha llegado a {{ potencia
+            }} vatios y el límite seguro es {{ objetivo }}. {% if apagados | count
+            > 0 %}Para evitar que salte el limitador, Jarvis ha desconectado por iniciativa
+            propia: {{ nombres_apagados }}. Ahora la casa consume {{ potencia_final
+            }} vatios. Infórmale como quien ha tomado una decisión sensata en su nombre.{%
+            else %}No había ninguna carga que se pudiera desconectar.{% endif %}'
+          peticion: '{% if apagados | count == 0 %}que apague aparatos de inmediato{%
+            elif potencia_final > objetivo %}que apague algo más, el consumo sigue
+            por encima del límite{% endif %}'
+          fallback: Señor, consumo crítico de {{ potencia }} vatios. {% if apagados
+            | count > 0 %}Me he tomado la libertad de desconectar {{ nombres_apagados
+            }}.{% else %}Le sugiero apagar algún aparato de inmediato, antes de que
+            el limitador lo decida por usted.{% endif %}
     - conditions:
       - condition: trigger
         id: nivel_1
@@ -389,37 +397,26 @@
           title: Consumo energético
           message: 'Exceso de consumo de red: {{ potencia }} W. {{ texto_mayor }}'
       - variables:
-          instrucciones: Escribe un aviso sarcástico y gracioso para avisar a la casa
-            de que están gastando demasiada luz, {{ potencia }} vatios, y pídeles
-            que apaguen algo. {{ texto_mayor }} {% if texto_mayor %}Menciona ese aparato.{%
-            endif %} {{ reglas_voz }}
-          fallback: Atención. Estamos consumiendo {{ potencia }} vatios de la red.
-            {{ texto_mayor }} Apagad algún aparato, por favor.
+          tono: aviso
+          situacion: La casa lleva un par de minutos consumiendo {{ potencia }} vatios
+            de la red, cerca del límite. Aún no es crítico. {% if texto_mayor %}{{
+            texto_mayor }} Menciónalo como principal sospechoso.{% endif %}
+          peticion: que apague algún aparato
+          fallback: Señor, estamos consumiendo {{ potencia }} vatios de la red. {{
+            texto_mayor }} Quizá convendría apagar algún aparato, si me lo permite.
     default:
     - stop: Sin acción
   - condition: template
-    value_template: '{{ horario_voz and instrucciones != '''' }}'
-  - variables:
-      ai_msg: {}
-  - action: ai_task.generate_data
-    continue_on_error: true
+    value_template: '{{ horario_voz and situacion != '''' }}'
+  - action: script.jarvis_hablar
     data:
-      entity_id: ai_task.openai_ai_task
-      task_name: aviso_consumo_{{ trigger.id }}
-      instructions: '{{ instrucciones }}'
-    response_variable: ai_msg
-  - action: tts.speak
-    target:
-      entity_id: tts.openai_tts_openai_tts_gpt_40_mini
-    data:
-      cache: false
-      media_player_entity_id:
+      altavoces:
       - media_player.hilo_musical
       - media_player.dormitorio
-      language: es
-      message: "{% if ai_msg.data is defined and ai_msg.data is string\n      and
-        ai_msg.data | trim != '' %}\n  {{ ai_msg.data | trim }}\n{% else %}\n  {{
-        fallback }}\n{% endif %}"
+      tono: '{{ tono }}'
+      situacion: '{{ situacion }}'
+      peticion: '{{ peticion }}'
+      fallback: '{{ fallback }}'
   mode: parallel
   max: 4
   max_exceeded: silent
@@ -458,8 +455,6 @@
     - lavavajillas
     - lavadora
     - secadora
-    reglas_voz: 'Español de España. Máximo 2 frases cortas. No uses comillas, asteriscos,
-      emojis ni símbolos: será leído por un sintetizador de voz.'
 - id: '1696677545912'
   alias: Notificacion puertas despues de las 23:00
   description: ''
@@ -629,18 +624,40 @@
   mode: single
 - id: '1696680873917'
   alias: Alarma inundación termos
-  description: Notifica y parpadea LED en rojo si se detecta inundación en los termos
-    (08:00–23:00)
+  description: 'Inundación en los termos: aviso crítico al móvil (24 h) y, entre 08:00
+    y 23:00, voz de Jarvis y LED del baño parpadeando en rojo'
   triggers:
-  - entity_id:
-    - binary_sensor.humedad_termos_inundacion
+  - trigger: state
+    entity_id: binary_sensor.humedad_termos_inundacion
     to: 'on'
-    trigger: state
-  conditions:
+  conditions: []
+  actions:
+  - action: notify.mobile_app_iphone_de_rogelio_ruiz_serrano
+    data:
+      title: Inundación en los termos
+      message: El sensor de humedad de los termos ha detectado agua.
+      data:
+        push:
+          sound:
+            name: default
+            critical: 1
+            volume: 1
   - condition: time
     after: 08:00:00
     before: '23:00:00'
-  actions:
+  - action: script.turn_on
+    target:
+      entity_id: script.jarvis_hablar
+    data:
+      variables:
+        tono: urgente
+        situacion: El sensor de inundación de los termos eléctricos acaba de detectar
+          agua en el suelo. Puede ser una fuga del termo, de la válvula de seguridad
+          o de una conexión.
+        peticion: que revise los termos cuanto antes y cierre la llave de paso si
+          hace falta
+        fallback: Señor, el sensor de los termos ha detectado agua en el suelo. Le
+          sugiero revisarlos de inmediato y cerrar la llave de paso si es necesario.
   - action: scene.create
     data:
       scene_id: led_bano_pre_alarma_inundacion
@@ -671,6 +688,10 @@
   - action: scene.turn_on
     target:
       entity_id: scene.led_bano_pre_alarma_inundacion
+  - action: notify.mobile_app_iphone_de_rogelio_ruiz_serrano
+    data:
+      title: Inundación en los termos
+      message: El sensor de los termos vuelve a estar seco.
   mode: single
 - id: '1696682250911'
   alias: Led tv salita
@@ -942,23 +963,44 @@
   mode: restart
 - id: '1696682712540'
   alias: Nivel CO2 alto
-  description: ''
+  description: Aviso de Jarvis para ventilar cuando el CO2 de la salita supera 1500
+    ppm
   triggers:
-  - entity_id:
-    - sensor.multisensor_salita_co2_medidor_salita
+  - trigger: numeric_state
+    entity_id: sensor.multisensor_salita_co2_medidor_salita
     above: 1500
-    trigger: numeric_state
+    for: 00:02:00
+  - trigger: time
+    at: '10:00:00'
   conditions:
   - condition: time
     after: '10:00:00'
     before: '23:00:00'
+  - condition: numeric_state
+    entity_id: sensor.multisensor_salita_co2_medidor_salita
+    above: 1500
   actions:
-  - data:
-      cache: true
-      entity_id: media_player.hilo_musical
-      message: Se recomienda ventilar
-      language: es
-    action: tts.google_say
+  - variables:
+      co2: '{{ states(''sensor.multisensor_salita_co2_medidor_salita'') | int(0) }}'
+      ac_encendido: '{{ states(''climate.casa'') not in [''off'', ''unavailable'',
+        ''unknown''] }}'
+  - action: script.jarvis_hablar
+    data:
+      altavoces: media_player.hilo_musical
+      tono: aviso
+      datos: 'CO2 en la salita: {{ co2 }} partes por millón. Lo recomendable es menos
+        de 1000.'
+      situacion: 'La concentración de CO2 en la salita es alta: {{ co2 }} partes por
+        millón. Con este nivel aparecen cansancio, falta de concentración y dolor
+        de cabeza. {% if ac_encendido %}El aire acondicionado está encendido, así
+        que conviene una ventilación corta e intensa, de cinco a diez minutos, para
+        no perder el aire climatizado.{% endif %}'
+      peticion: '{% if ac_encendido %}que ventile la salita unos minutos abriendo
+        ventanas{% else %}que abra las ventanas de la salita para ventilar{% endif
+        %}'
+      fallback: Señor, el CO2 de la salita está en {{ co2 }} partes por millón. Le
+        sugiero ventilar unos minutos, antes de que el ambiente empiece a afectar
+        a su capacidad de concentración.
   mode: single
 - id: '1696717743714'
   alias: Estor Rakel 85% ventana abierta
@@ -1028,74 +1070,89 @@
   mode: single
 - id: '1703154493983'
   alias: Ventilar casa
-  description: ''
+  description: Recordatorio de Jarvis a las 11:00 para ventilar si el CO2 supera 1000
+    ppm
   triggers:
-  - at: '11:00:00'
-    trigger: time
+  - trigger: time
+    at: '11:00:00'
   conditions:
-  - condition: and
-    conditions:
-    - condition: numeric_state
-      entity_id: sensor.multisensor_salita_co2_medidor_salita
-      above: 1000
-    - condition: state
-      entity_id: input_boolean.ventilar_salita
-      state: 'off'
+  - condition: numeric_state
+    entity_id: sensor.multisensor_salita_co2_medidor_salita
+    above: 1000
+  - condition: state
+    entity_id: input_boolean.ventilar_salita
+    state: 'off'
   actions:
-  - data:
-      cache: true
-      entity_id: media_player.hilo_musical
-      message: Recomiendo ventilar la casa.
-      language: es
-    action: tts.google_say
+  - variables:
+      co2: '{{ states(''sensor.multisensor_salita_co2_medidor_salita'') | int(0) }}'
+      ac_encendido: '{{ states(''climate.casa'') not in [''off'', ''unavailable'',
+        ''unknown''] }}'
+  - action: script.jarvis_hablar
+    data:
+      altavoces: media_player.hilo_musical
+      tono: informativo
+      datos: 'CO2 en la salita: {{ co2 }} partes por millón. Lo recomendable es menos
+        de 1000.'
+      situacion: 'Es la revisión de calidad del aire de media mañana. El CO2 de la
+        casa está en {{ co2 }} partes por millón, por encima de lo recomendable, así
+        que es buen momento para renovar el aire. {% if ac_encendido %}El aire acondicionado
+        está encendido: basta con una ventilación corta, de cinco a diez minutos.{%
+        endif %}'
+      peticion: '{% if ac_encendido %}que ventile la casa unos minutos{% else %}que
+        abra las ventanas para ventilar la casa{% endif %}'
+      fallback: Señor, el CO2 de la casa está en {{ co2 }} partes por millón. Le recomiendo
+        ventilar unos minutos para renovar el aire.
   - action: input_boolean.turn_on
-    metadata: {}
-    data: {}
     target:
       entity_id: input_boolean.ventilar_salita
   mode: single
 - id: '1703155133355'
   alias: Ventilar casa - casa ventilada
-  description: ''
+  description: Jarvis avisa de que ya se pueden cerrar las ventanas cuando el CO2
+    baja de 500 ppm
   triggers:
-  - entity_id:
-    - sensor.multisensor_salita_co2_medidor_salita
+  - trigger: numeric_state
+    entity_id: sensor.multisensor_salita_co2_medidor_salita
     below: 500
-    trigger: numeric_state
+    for: 00:01:00
   conditions:
   - condition: time
     after: '11:00:00'
     before: '15:00:00'
-  - condition: and
-    conditions:
-    - condition: time
-      after: '11:00:00'
-      before: '15:00:00'
-    - condition: state
-      entity_id: binary_sensor.ventana_dormitorio_rakel_window
-      state: 'on'
-    - condition: state
-      entity_id: binary_sensor.ventana_dormitorio_principal_window
-      state: 'on'
-    - condition: state
-      entity_id: binary_sensor.ventana_salita_window
-      state: 'on'
-    - condition: state
-      entity_id: input_boolean.ventilar_salita
-      state: 'on'
+  - condition: state
+    entity_id: input_boolean.ventilar_salita
+    state: 'on'
+  - condition: template
+    value_template: '{{ ventanas | select(''is_state'', ''on'') | list | count > 0
+      }}'
   actions:
-  - data:
-      cache: true
-      entity_id: media_player.hilo_musical
-      message: Casa suficientemente ventilada. Se pueden cerrar las ventanas.
-      language: es
-    action: tts.google_say
+  - variables:
+      co2: '{{ states(''sensor.multisensor_salita_co2_medidor_salita'') | int(0) }}'
+      nombres: "{{ expand(ventanas | select('is_state', 'on') | list)\n   | map(attribute='name')
+        | map('replace', ' Window', '') | list }}"
+      lista_ventanas: '{%- if nombres | count == 1 -%}{{ nombres[0] }} {%- else -%}{{
+        nombres[:-1] | join('', '') ~ '' y '' ~ nombres[-1] }} {%- endif -%}'
+  - action: script.jarvis_hablar
+    data:
+      altavoces: media_player.hilo_musical
+      tono: informativo
+      datos: 'CO2 en la salita: {{ co2 }} partes por millón, prácticamente el nivel
+        del aire exterior.'
+      situacion: 'La ventilación de la mañana ha cumplido su objetivo: el CO2 de la
+        casa ha bajado a {{ co2 }} partes por millón. Siguen abiertas: {{ lista_ventanas
+        }}. Ya no hace falta tenerlas abiertas.'
+      peticion: que cierre {{ lista_ventanas }}, mencionándolas explícitamente
+      fallback: Señor, el aire de la casa ya está renovado, {{ co2 }} partes por millón.
+        Puede cerrar {{ lista_ventanas }} cuando guste.
   - action: input_boolean.turn_off
-    metadata: {}
-    data: {}
     target:
       entity_id: input_boolean.ventilar_salita
   mode: single
+  variables:
+    ventanas:
+    - binary_sensor.ventana_salita_window
+    - binary_sensor.ventana_dormitorio_principal_window
+    - binary_sensor.ventana_dormitorio_rakel_window
 - id: '1705428169775'
   alias: Ajustar corriente carga según consumo red (mejorado con sensores del sistema)
   description: 'Ajusta number.settings_ess_maxchargecurrent (A DC) para que el consumo
@@ -2204,7 +2261,7 @@
   mode: restart
 - id: '1729877172150'
   alias: Detector de fugas baño pequeño
-  description: ''
+  description: Aviso de fuga de agua en el baño pequeño (móvil + voz de Jarvis)
   triggers:
   - type: moist
     device_id: cb2e1da1e8977ab89b082e68140b675d
@@ -2213,17 +2270,27 @@
     trigger: device
   conditions: []
   actions:
-  - data:
-      message: Se ha detectado fuga de agua en el baño pequeño.
-      title: Alerta
-    action: notify.notify
-  - action: tts.google_say
-    metadata: {}
+  - action: notify.notify
     data:
-      cache: false
-      entity_id: media_player.hilo_musical
-      language: es
-      message: Detectada fuga de agua en el baño pequeño
+      title: Fuga de agua
+      message: Se ha detectado fuga de agua en el baño pequeño.
+      data:
+        push:
+          sound:
+            name: default
+            critical: 1
+            volume: 1
+  - action: script.jarvis_hablar
+    data:
+      altavoces:
+      - media_player.hilo_musical
+      tono: urgente
+      situacion: El sensor de fugas del baño pequeño acaba de detectar agua en el
+        suelo. Puede ser una fuga de una tubería, de la cisterna o del lavabo.
+      peticion: que revise el baño pequeño cuanto antes y cierre la llave de paso
+        si hace falta
+      fallback: Señor, el sensor del baño pequeño ha detectado agua en el suelo. Le
+        sugiero revisarlo de inmediato, antes de que se convierta en una piscina.
   mode: single
 - id: '1729955318322'
   alias: Fuga de agua en la cocina
@@ -4553,43 +4620,29 @@
           > 0 }}'
       sequence:
       - variables:
-          ai_message: {}
-          estilo: '{{ estilos | random }}'
           nombres: "{{ expand(aberturas | select('is_state','on') | list)\n   | map(attribute='name')\n
             \  | map('replace', ' Window', '')\n   | map('replace', ' Contact', '')\n
             \  | list }}"
           lista_aberturas: '{%- if nombres | count == 0 -%}alguna puerta o ventana
             {%- elif nombres | count == 1 -%}{{ nombres[0] }} {%- else -%}{{ nombres[:-1]
             | join('', '') ~ '' y '' ~ nombres[-1] }} {%- endif -%}'
-      - action: ai_task.generate_data
-        continue_on_error: true
+          aviso_n: '{{ repeat.index }}'
+          potencia_aa: '{{ states(''sensor.aire_acondicionado_power'') | float(0)
+            | round(0) | int }}'
+      - action: script.jarvis_hablar
         data:
-          entity_id: ai_task.openai_ai_task
-          task_name: aviso_aire_acondicionado
-          instructions: "Genera un aviso corto para reproducir por voz en una vivienda.\nEl
-            aire acondicionado está funcionando y siguen abiertas: {{ lista_aberturas
-            }}.\nEstilo narrativo obligatorio para este mensaje: {{ estilo }}.\nRequisitos:\n-
-            Español de España. Máximo 2 frases cortas.\n- Menciona explícitamente
-            las aperturas indicadas.\n- El objetivo es que alguien vaya a cerrarlas.\n-
-            Humor inteligente, ironía o sarcasmo suave: enfriar la calle,\n  climatizar
-            el barrio, regalar aire acondicionado a los vecinos o similar.\n- Debe
-            sonar natural leído en voz alta.\n- Sin emojis, sin comillas y sin explicaciones
-            fuera del mensaje.\n"
-        response_variable: ai_message
-      - variables:
-          mensaje: "{% if ai_message.data is defined and ai_message.data is string\n
-            \     and ai_message.data | trim != '' %}\n  {{ ai_message.data | trim
-            }}\n{% else %}\n  {{ aviso_fallback }}\n{% endif %}"
-      - action: tts.speak
-        target:
-          entity_id: tts.openai_tts_openai_tts_gpt_40_mini
-        data:
-          cache: false
-          media_player_entity_id:
-          - media_player.hilo_musical
-          - media_player.dormitorio
-          message: '{{ mensaje }}'
-          language: es
+          altavoces: media_player.hilo_musical
+          tono: '{{ ''aviso'' if aviso_n == 1 else ''urgente'' if aviso_n >= 4 else
+            ''aleatorio'' }}'
+          situacion: 'El aire acondicionado está funcionando y siguen abiertas: {{
+            lista_aberturas }}. Se está escapando el aire climatizado a la calle.
+            {% if aviso_n > 1 %}Es el aviso número {{ aviso_n }}: ya se le ha avisado
+            antes y sigue igual. Hazlo notar con elegancia, cada vez con algo menos
+            de paciencia británica.{% endif %}'
+          datos: 'Consumo actual del aire acondicionado: {{ potencia_aa }} vatios'
+          peticion: que cierre {{ lista_aberturas }}, mencionándolas explícitamente
+          fallback: Señor, el aire acondicionado está funcionando con {{ lista_aberturas
+            }} abierta. Le sugiero cerrarlo, a menos que pretenda climatizar el barrio.
       - wait_template: "{{ aberturas | select('is_state','on') | list | count == 0\n
           \  or states('sensor.aire_acondicionado_power') | float(0) <= 150 }}"
         timeout: 00:15:00
@@ -4606,17 +4659,6 @@
     - binary_sensor.ventana_salita_window
     - binary_sensor.puerta_del_patio_window
     - binary_sensor.bthome_sensor_7162_window
-    estilos:
-    - narrador deportivo
-    - presentador de telediario
-    - documental de naturaleza
-    - tráiler de película épica
-    - anuncio de teletienda
-    - parte meteorológico
-    - operador de atención al cliente
-    - investigador privado
-    aviso_fallback: Atención. Hay puertas o ventanas abiertas mientras el aire acondicionado
-      está funcionando. Cerradlas para evitar pérdidas de energía.
 - id: '1789598588202'
   alias: Restablecimiento progresivo de cargas
   description: Reconecta cargas deslastradas de una en una según su consumo medido
@@ -4632,6 +4674,7 @@
       estado: '{{ states(''input_text.deslastre_cargas'') | from_json(default={})
         }}'
       pendientes: '{{ estado.get(''p'', {}) }}'
+      restaurados: '{{ estado.get(''r'', []) }}'
       siguiente: "{{ orden_restauracion | select('in', pendientes.keys() | list)\n
         \  | list | first | default('') }}"
       previsto: '{{ [ (pendientes.get(siguiente, 0) * factor) | int, minimo_previsto
@@ -4670,21 +4713,39 @@
   - variables:
       restantes: '{{ dict(pendientes.items() | rejectattr(''0'', ''eq'', siguiente)
         | list) }}'
+      restaurados: '{{ restaurados + [siguiente] }}'
   - action: input_text.set_value
     target:
       entity_id: input_text.deslastre_cargas
     data:
-      value: '{% if restantes | count > 0 %}{{ {''p'': restantes, ''m'': estado.get(''m''),
-        ''t'': estado.get(''t''), ''ts'': estado.get(''ts'', 0)} | to_json }}{% endif
-        %}'
+      value: '{% if restantes | count > 0 %}{{ {''p'': restantes, ''r'': restaurados,
+        ''m'': estado.get(''m''), ''t'': estado.get(''t''), ''ts'': estado.get(''ts'',
+        0)} | to_json }}{% endif %}'
   - if:
     - condition: template
       value_template: '{{ restantes | count == 0 }}'
     then:
+    - variables:
+        lista_nombres: '{% set ns = namespace(l=[]) %}{% for k in restaurados | unique
+          %}{% set ns.l = ns.l + [nombres[k]] %}{% endfor %}{{ ns.l | join('', '')
+          }}'
+        consumo_actual: '{{ states(''sensor.red_total'') | float(0) | round(0) | int
+          }}'
     - action: notify.mobile_app_iphone_de_rogelio_ruiz_serrano
       data:
         title: Consumo energético
-        message: Todas las cargas deslastradas se han restablecido.
+        message: 'Cargas restablecidas: {{ lista_nombres }}. Consumo actual de red:
+          {{ consumo_actual }} W.'
+    - action: script.jarvis_hablar
+      data:
+        tono: informativo
+        solo_de_dia: true
+        situacion: 'Tras el pico de consumo de antes, Jarvis ha vuelto a conectar
+          de una en una todas las cargas que había desconectado: {{ lista_nombres
+          }}. El consumo de la red es ahora de {{ consumo_actual }} vatios, dentro
+          del límite. Todo vuelve a la normalidad.'
+        fallback: Señor, he restablecido todas las cargas desconectadas. El consumo
+          de la red está de nuevo bajo control.
   mode: single
   max_exceeded: silent
   variables:
@@ -4879,3 +4940,79 @@
     - input_number.consumo_2o_ducha
     - input_number.consumo_3o_ducha
     - input_number.consumo_4o_ducha
+- id: '1792146433785'
+  alias: Prueba de voz elevenlabs
+  description: ''
+  triggers: []
+  conditions: []
+  actions:
+  - action: tts.speak
+    metadata: {}
+    target:
+      entity_id: tts.elevenlabs_texto_a_voz
+    data:
+      cache: false
+      media_player_entity_id: media_player.hilo_musical
+      message: Esto es una prueba de síntesis de voz para Home Assistant.
+  mode: single
+- id: '1792150482064'
+  alias: Ventilar casa - reinicio diario
+  triggers:
+  - trigger: time
+    at: 00:00:00
+  actions:
+  - action: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.ventilar_salita
+  mode: single
+- id: '1792191622568'
+  alias: Electrodomésticos - fin de ciclo
+  description: Jarvis avisa cuando terminan el lavavajillas, la lavadora o la secadora
+    (09:00–22:00)
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.lavavajillas_funcionando
+    from: 'on'
+    to: 'off'
+    id: lavavajillas
+  - trigger: state
+    entity_id: binary_sensor.lavadora_funcionando
+    from: 'on'
+    to: 'off'
+    id: lavadora
+  - trigger: state
+    entity_id: binary_sensor.secadora_funcionando
+    from: 'on'
+    to: 'off'
+    id: secadora
+  conditions: []
+  actions:
+  - variables:
+      aparato: '{{ aparatos[trigger.id] }}'
+      minutos: "{{ ((now() - trigger.from_state.last_changed).total_seconds() / 60)\n
+        \  | round(0) | int }}"
+  - action: script.jarvis_hablar
+    data:
+      altavoces: media_player.hilo_musical
+      tono: aleatorio
+      solo_de_dia: true
+      datos: 'Duración aproximada del ciclo: {{ minutos }} minutos'
+      situacion: '{{ aparato.nombre | capitalize }} acaba de terminar su ciclo.'
+      peticion: '{{ aparato.peticion }}'
+      fallback: Señor, {{ aparato.nombre }} ha terminado. {{ aparato.fallback }}
+  mode: parallel
+  max: 3
+  variables:
+    aparatos:
+      lavavajillas:
+        nombre: el lavavajillas
+        peticion: que vacíe el lavavajillas cuando le venga bien
+        fallback: La vajilla le espera, impecable.
+      lavadora:
+        nombre: la lavadora
+        peticion: que tienda la ropa pronto, antes de que coja olor a humedad
+        fallback: Le sugiero tender la ropa antes de que se arrugue.
+      secadora:
+        nombre: la secadora
+        peticion: que saque la ropa ya, mientras está caliente, para que no se arrugue
+        fallback: Conviene sacar la ropa ahora que aún está caliente.

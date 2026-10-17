@@ -289,3 +289,31 @@
       \  'exceptional': 'excepcional',\n} %} {{ traducciones.get(estado_ingles, estado_ingles)\
       \ }}"
 
+###################################################
+### Control de funcionamiento electrodomesticos ###
+###################################################
+
+- binary_sensor:
+    - name: Lavavajillas funcionando
+      unique_id: lavavajillas_funcionando
+      device_class: running
+      delay_on: "00:02:00"
+      delay_off: "00:15:00"     # el secado puede estar casi a 0 W bastante rato
+      availability: "{{ has_value('sensor.lavavajillas_power') }}"
+      state: "{{ states('sensor.lavavajillas_power') | float(0) > 5 }}"
+
+    - name: Lavadora funcionando
+      unique_id: lavadora_funcionando
+      device_class: running
+      delay_on: "00:02:00"
+      delay_off: "00:05:00"     # pausas de remojo y centrifugado
+      availability: "{{ has_value('sensor.lavadora_sonoff_pow_power') }}"
+      state: "{{ states('sensor.lavadora_sonoff_pow_power') | float(0) > 5 }}"
+
+    - name: Secadora funcionando
+      unique_id: secadora_funcionando
+      device_class: running
+      delay_on: "00:02:00"      # ignora los giros antiarrugas cortos
+      delay_off: "00:03:00"
+      availability: "{{ has_value('sensor.secadora_switch_0_power') }}"
+      state: "{{ states('sensor.secadora_switch_0_power') | float(0) > 10 }}"
