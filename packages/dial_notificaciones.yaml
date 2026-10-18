@@ -237,7 +237,7 @@ automation:
       # O1 · Lavadora terminada
       - trigger: numeric_state
         id: O1
-        entity_id: sensor.lavadora_sonoff_pow_power
+        entity_id: sensor.lavadora_power
         below: 3
         for: "00:03:00"
       # O2 · Lavavajillas terminado (Home Connect)

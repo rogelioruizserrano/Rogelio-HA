@@ -29,6 +29,8 @@ include:
     - sensor.shellyem_244cab418bca_channel_1_voltage
     - sensor.shellyem_244cab418bca_channel_2_power
     - sensor.shellyem_244cab418bca_channel_2_energy
+    - sensor.casa_power
+    - sensor.casa_energy
 
     # ===== Excedentes =====
     - sensor.excedentes
@@ -54,6 +56,8 @@ include:
     - sensor.string_suroeste
 
     # ===== Solar / PV (Victron) =====
+    - sensor.multiplus_ii_48_5000_70_50_id_276_0_line_1_input_power
+    - sensor.multiplus_ii_48_5000_70_50_id_276_energy_from_ac_in_1_to_ac_out
     - sensor.gx_device_pv_on_output_power_l1
     - sensor.gx_device_pv_power
     - sensor.victron_system_dc_pv_power_kwh
@@ -144,6 +148,7 @@ include:
     - sensor.multiplus_ii_48_5000_70_50_id_276_corriente_de_entrada_l1
     - sensor.multiplus_ii_48_5000_70_50_id_276_frecuencia_de_entrada_l1
     - sensor.multiplus_ii_48_5000_70_50_id_276_tension_de_entrada_l1
+    - sensor.multiplus_ii_48_5000_70_50_id_276_0_line_1_output_power
 
     # ===== Ahorro / Costes generales =====
     - sensor.ahorro_casa_coste_por_dia
@@ -194,15 +199,21 @@ include:
     - sensor.horno_energy
     - sensor.horno_kwh
     - sensor.horno_power
+    - switch.lavadora
+    - sensor.lavadora_power
+    - sensor.lavadora_energy
     - sensor.lavadora_anual
     - sensor.lavadora_diario
     - sensor.lavadora_mensual
-    - sensor.lavadora_sonoff_pow_power
+    - switch.lavavajillas
     - sensor.lavavajillas_power
-    - sensor.secadora
-    - sensor.secadora_anual
-    - sensor.secadora_diario
-    - sensor.secadora_mensual
+    - sensor.lavavajillas_energy
+    - switch.secadora
+    - sensor.secadora_power
+    - sensor.secadora_energy
+    - switch.airfryer
+    - sensor.airfryer_power
+    - sensor.airfryer_energy
     - sensor.vitroceramica_anual
     - sensor.vitroceramica_coste_por_ano
     - sensor.vitroceramica_coste_por_dia
@@ -216,9 +227,8 @@ include:
     - sensor.cafetera_potencia
     - sensor.plancha_energia
     - sensor.plancha_potencia
-    - switch.lavadora_sonoff_pow_relay
-    - switch.lavavajillas
-    - switch.secadora_switch_0
+
+
 
     # ===== Electrodomésticos (agregados) =====
     - sensor.consumo_electrodomesticos_no_medibles_2
@@ -235,15 +245,12 @@ include:
     - sensor.armario_red_power
     - sensor.armario_red_energy
     - sensor.consumo_de_la_casa
-    - sensor.consumo_linea_enchufes
+    - sensor.linea_enchufes_power
+    - sensor.linea_enchufes_energy
+    - sensor.linea_iluminacion_power
+    - sensor.linea_iluminacion_energy
     - sensor.consumo_no_medible
     - sensor.shellyplug_s_3ce90ee04758_energy
-
-    # ===== Consumo casa (Shelly EM e45b47) =====
-    - sensor.shellyem_e45b47_channel_1_energy
-    - sensor.shellyem_e45b47_channel_1_power
-    - sensor.shellyem_e45b47_channel_2_energy
-    - sensor.shellyem_e45b47_channel_2_power
 
     # ===== Consumo taller =====
     - sensor.taller_consumo_taller_energia

@@ -135,9 +135,9 @@
   - data: {}
     target:
       entity_id:
-      - switch.secadora_switch_0
       - switch.lavavajillas
-      - switch.lavadora_sonoff_pow_relay
+      - switch.secadora
+      - switch.shelly1pmg4_e4b063679ed8
     action: switch.turn_on
   mode: single
 - id: '1683498603492'
@@ -1617,24 +1617,24 @@
   - choose:
     - conditions:
       - condition: numeric_state
-        entity_id: sensor.lavadora_sonoff_pow_power
+        entity_id: sensor.lavadora_power
         below: 3
       sequence:
       - metadata: {}
         data: {}
         target:
-          entity_id: switch.lavadora_sonoff_pow_relay
+          entity_id: switch.shelly1pmg4_e4b063679ed8
         action: switch.turn_off
   - choose:
     - conditions:
       - condition: numeric_state
-        entity_id: sensor.secadora_switch_0_power
+        entity_id: sensor.secadora_power
         below: 3
       sequence:
       - metadata: {}
         data: {}
         target:
-          entity_id: switch.secadora_switch_0
+          entity_id: switch.secadora
         action: switch.turn_off
   mode: single
 - id: '1720512552256'
@@ -2404,13 +2404,13 @@
           entity_id:
           - switch.radiador_salita
           - switch.enchufe_radiador_00_00_00_cocina_interior
-          - switch.lavadora_sonoff_pow_relay
-          - switch.secadora_switch_0
+          - switch.secadora
           - switch.lavavajillas
           - switch.termo_50l_switch_0
           - switch.switch_termo_100l_00_00_00_cuartillo_azotea_interior
           - switch.rele_aire_acondicionado
           - switch.secatoallas
+          - switch.shelly1pmg4_e4b063679ed8
     - conditions:
       - condition: and
         conditions:
@@ -2473,13 +2473,13 @@
         data: {}
         target:
           entity_id:
-          - switch.lavadora_sonoff_pow_relay
-          - switch.secadora_switch_0
+          - switch.secadora
           - switch.lavavajillas
           - switch.termo_50l_switch_0
           - switch.switch_termo_100l_00_00_00_cuartillo_azotea_interior
           - switch.rele_aire_acondicionado
           - switch.secatoallas
+          - switch.shelly1pmg4_e4b063679ed8
     - conditions:
       - condition: and
         conditions:
@@ -2782,10 +2782,10 @@
       - switch.radiador_salita
       - switch.enchufe_radiador_00_00_00_cocina_interior
       - switch.lavavajillas
-      - switch.secadora_switch_0
-      - switch.lavadora_sonoff_pow_relay
       - switch.activa_pwm_termo_50l
       - switch.activa_pwm_termo_100l
+      - switch.secadora
+      - switch.shelly1pmg4_e4b063679ed8
   - action: climate.turn_off
     metadata: {}
     data: {}
@@ -2851,11 +2851,13 @@
       entity_id: switch.lavavajillas
       state: 'off'
     - condition: state
-      entity_id: switch.secadora_switch_0
-      state: 'off'
+      entity_id: switch.secadora
+      state:
+      - 'off'
     - condition: state
-      entity_id: switch.lavadora_sonoff_pow_relay
-      state: 'off'
+      entity_id: switch.shelly1pmg4_e4b063679ed8
+      state:
+      - 'off'
   actions:
   - action: switch.turn_on
     metadata: {}
@@ -2863,10 +2865,10 @@
     target:
       entity_id:
       - switch.lavavajillas
-      - switch.secadora_switch_0
-      - switch.lavadora_sonoff_pow_relay
       - switch.activa_pwm_termo_50l
       - switch.activa_pwm_termo_100l
+      - switch.secadora
+      - switch.shelly1pmg4_e4b063679ed8
   mode: single
 - id: '1737488224056'
   alias: Apagado automatico fuera de casa

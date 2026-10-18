@@ -236,37 +236,29 @@
     name: Consumo solar
     state: '{{ (states(''sensor.gx_device_pv_on_output_power_l1'')|float(default=0) - states(''sensor.bateria_descarga'')|float(default=0))|round(2,
       default=0.0)  }}'
-  - unit_of_measurement: W
-    device_class: power
-    state_class: measurement
-    default_entity_id: sensor.consumo_linea_enchufes
-    name: Consumo linea enchufes
-    state: '{{ (states(''sensor.shellyem_e45b47_channel_1_power'')|float(default=0)
-      - states(''sensor.armario_red_power'')|float(default=0) - states(''sensor.radiador_cocina_power'')|float(default=0)
-      - states(''sensor.radiador_salita_power'')|float(default=0))|round(2, default=0.0)  }}'
-  - unit_of_measurement: W
-    device_class: power
-    state_class: measurement
-    default_entity_id: sensor.consumo_medible
-    name: Consumo de la casa medible
-    state: '{{ ((states(''sensor.radiador_cocina_power'')|float(default=0)) + (states(''sensor.radiador_salita_power'')|float(default=0))
-      + (states(''sensor.luces_escalera_power'')|float(default=0)) + (states(''sensor.termo_50l_switch_0_power'')|float(default=0)) + (states(''sensor.switch_termo_100l_00_00_00_cuartillo_azotea_interior_power'')|float(default=0))
-      + (states(''sensor.consumo_electrodomesticos_no_medibles'')|float(default=0))
-      + (states(''sensor.armario_red_power'')|float(default=0)) + (states(''sensor.shellyem_e45b47_channel_1_power'')|float(default=0))
-      + (states(''sensor.shellyem_e45b47_channel_2_power'')|float(default=0)) + (states(''sensor.vitroceramica_power'')|float(default=0))
-      + (states(''sensor.secadora_switch_0_power'')|float(default=0)) + (states(''sensor.consumo_horno_micro_cafetera_pzem_004t_v3_power'')|float(default=0))
-      + (states(''sensor.lavavajillas_power'')|float(default=0)) + (states(''sensor.lavadora_sonoff_pow_power'')|float(default=0))
-      + (states(''sensor.aire_acondicionado_power'')|float(default=0)) + (states(''sensor.taller_consumo_taller_potencia'')|float(default=0)))|round(2,
-      default=0.0) }}'
+#  - unit_of_measurement: W
+#    device_class: power
+#    state_class: measurement
+#    default_entity_id: sensor.consumo_medible
+#    name: Consumo de la casa medible
+#    state: '{{ ((states(''sensor.radiador_cocina_power'')|float(default=0)) + (states(''sensor.radiador_salita_power'')|float(default=0))
+#      + (states(''sensor.luces_escalera_power'')|float(default=0)) + (states(''sensor.termo_50l_switch_0_power'')|float(default=0)) + (states(''sensor.switch_termo_100l_00_00_00_cuartillo_azotea_interior_power'')|float(default=0))
+#      + (states(''sensor.consumo_electrodomesticos_no_medibles'')|float(default=0))
+#      + (states(''sensor.armario_red_power'')|float(default=0)) + (states(''sensor.linea_enchufes_power'')|float(default=0))
+#      + (states(''sensor.linea_iluminacion_power'')|float(default=0)) + (states(''sensor.vitroceramica_power'')|float(default=0))
+#      + (states(''sensor.secadora_power'')|float(default=0)) + (states(''sensor.consumo_horno_micro_cafetera_pzem_004t_v3_power'')|float(default=0))
+#      + (states(''sensor.lavavajillas_power'')|float(default=0)) + (states(''sensor.lavadora_power'')|float(default=0))
+#      + (states(''sensor.aire_acondicionado_power'')|float(default=0)) + (states(''sensor.taller_consumo_taller_potencia'')|float(default=0)))|round(2,
+#      default=0.0) }}'
 
-  - unit_of_measurement: W
-    device_class: power
-    state_class: measurement
-    default_entity_id: sensor.consumo_no_medible
-    name: Consumo de la casa no medible
-    state: '{{ (states(''sensor.shellyem_244cab418bca_channel_2_power'')|float(default=0)
-      - states(''sensor.consumo_medible'')|float(default=0))|round(2, default=0.0)
-      }}'
+#  - unit_of_measurement: W
+#    device_class: power
+#    state_class: measurement
+#    default_entity_id: sensor.consumo_no_medible
+#    name: Consumo de la casa no medible
+#    state: '{{ (states(''sensor.casa_power'')|float(default=0)
+#      - states(''sensor.consumo_medible'')|float(default=0))|round(2, default=0.0)
+#      }}'
 
   - default_entity_id: sensor.ratio_consumo_excedentes
     name: Ratio consumo red/excedentes
@@ -298,7 +290,7 @@
       unique_id: lavavajillas_funcionando
       device_class: running
       delay_on: "00:02:00"
-      delay_off: "00:15:00"     # el secado puede estar casi a 0 W bastante rato
+      delay_off: "00:25:00"     # el secado puede estar casi a 0 W bastante rato
       availability: "{{ has_value('sensor.lavavajillas_power') }}"
       state: "{{ states('sensor.lavavajillas_power') | float(0) > 5 }}"
 
@@ -307,13 +299,13 @@
       device_class: running
       delay_on: "00:02:00"
       delay_off: "00:05:00"     # pausas de remojo y centrifugado
-      availability: "{{ has_value('sensor.lavadora_sonoff_pow_power') }}"
-      state: "{{ states('sensor.lavadora_sonoff_pow_power') | float(0) > 5 }}"
+      availability: "{{ has_value('sensor.lavadora_power') }}"
+      state: "{{ states('sensor.lavadora_power') | float(0) > 5 }}"
 
     - name: Secadora funcionando
       unique_id: secadora_funcionando
       device_class: running
       delay_on: "00:02:00"      # ignora los giros antiarrugas cortos
       delay_off: "00:03:00"
-      availability: "{{ has_value('sensor.secadora_switch_0_power') }}"
-      state: "{{ states('sensor.secadora_switch_0_power') | float(0) > 10 }}"
+      availability: "{{ has_value('sensor.secadora_power') }}"
+      state: "{{ states('sensor.secadora_power') | float(0) > 10 }}"
