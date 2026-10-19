@@ -3540,29 +3540,22 @@
   mode: single
 - id: '1772791528126'
   alias: Informe diario de Raquel 2
-  description: ''
+  description: Informe matinal de Jarvis para Raquel al encender la luz de la cocina
   triggers:
   - trigger: state
-    entity_id:
-    - light.luz_cocina
+    entity_id: light.luz_cocina
     to: 'on'
   conditions:
   - condition: template
-    value_template: '{{ state_attr(''automation.informe_diario_de_raquel_2'', ''last_triggered'')
-      == None or (state_attr(''automation.informe_diario_de_raquel_2'', ''last_triggered'')
-      | as_local).date() != now().date() }}'
+    value_template: "{{ this.attributes.last_triggered is none\n   or (this.attributes.last_triggered
+      | as_local).date() != now().date() }}"
   - condition: time
     after: 07:16:00
+    before: '12:00:00'
   actions:
   - action: media_player.turn_on
     target:
       entity_id: media_player.google_nest_hub_cocina
-  - delay:
-      hours: 0
-      minutes: 0
-      seconds: 3
-      milliseconds: 0
-    enabled: false
   - action: calendar.get_events
     target:
       entity_id: calendar.familia
@@ -3570,59 +3563,74 @@
       start_date_time: '{{ today_at(''00:00:00'') }}'
       end_date_time: '{{ today_at(''23:59:59'') }}'
     response_variable: eventos_hoy
-  - action: ai_task.generate_data
+  - variables:
+      clima: "{{ {'clear-night': 'noche despejada', 'cloudy': 'nublado', 'fog': 'niebla',\n
+        \   'hail': 'granizo', 'lightning': 'tormenta eléctrica',\n    'lightning-rainy':
+        'tormenta con lluvia', 'partlycloudy': 'parcialmente nublado',\n    'pouring':
+        'lluvia intensa', 'rainy': 'lluvioso', 'snowy': 'nevado',\n    'snowy-rainy':
+        'aguanieve', 'sunny': 'soleado', 'windy': 'ventoso',\n    'windy-variant':
+        'ventoso con nubes', 'exceptional': 'excepcional'\n   }.get(states('weather.pirateweather'),
+        states('weather.pirateweather')) }}"
+      t_ext: '{{ state_attr(''weather.pirateweather'', ''temperature'') | float(0)
+        | round(0) | int }}'
+      t_int: '{{ states(''sensor.temperatura_media_en_casa'') | float(0) | round(0)
+        | int }}'
+      soc: '{{ states(''sensor.gx_device_dc_battery_charge'') | float(0) | round(0)
+        | int }}'
+      solar_kwh: '{{ states(''sensor.solcast_pv_forecast_forecast_today'') | float(0)
+        | round(1) }}'
+      solar_pico: "{{ as_timestamp(states('sensor.solcast_pv_forecast_peak_time_today'),
+        0)\n   | timestamp_custom('%H:%M') }}"
+      agenda: "{% set ev = eventos_hoy['calendar.familia']['events'] %} {%- if ev
+        | count == 0 -%}Sin eventos en la agenda de hoy. {%- else -%}{{ ev | count
+        }} eventos:\n  {%- for e in ev %} {% if 'T' in e.start %}a las {{ as_timestamp(e.start)\n
+        \ | timestamp_custom('%H:%M') }}, {{ e.summary }}{% else %}todo el día, {{\n
+        \ e.summary }}{% endif %}{{ '.' if loop.last else ';' }}{% endfor %}\n{%-
+        endif -%}"
+  - action: script.jarvis_hablar
     data:
-      entity_id: ai_task.openai_ai_task
-      task_name: saludo_mananero
-      instructions: "Hola asistente. Genera un saludo de \"Buenos días\" original
-        e inteligente para Raquel, para decírselo hoy por la mañana.\nMenciona una
-        curiosidad breve del día de hoy, un evento histórico interesante o una efeméride.
-        \nEl tono debe ser relajado, agradable y con un punto de humor sutil, sin
-        exceso de euforia, ya que es temprano. Trátala con cariño.\nMUY IMPORTANTE:
-        NO uses la frase literal \"Buenos días Raquel\", empieza directamente con
-        la frase.\nMáximo 2-3 frases cortas en total."
-    response_variable: ai_message
-  - action: ai_task.generate_data
-    data:
-      entity_id: ai_task.openai_ai_task
-      task_name: despedida_cine
-      instructions: Genera una frase de despedida para Raquel de parte de su marido
-        Rogelio, usando un humor adulto, sugerente y muy pícaro. No uses lenguaje
-        explícitamente pornográfico para no violar las normas de seguridad, pero sí
-        metáforas muy evidentes sobre sexo. Dile que esta noche le espera una sesión
-        intensa de pasión en la cama, usando bromas de doble sentido, insinuaciones
-        claras de que la va a poner fina, o referencias divertidas y atrevidas. Solo
-        la frase directa, sin introducciones.
-    response_variable: ai_quote
-  - action: tts.speak
-    metadata: {}
-    data:
-      cache: true
-      media_player_entity_id: media_player.google_nest_hub_cocina
-      message: "{% set weather_translation = {\n  'clear-night': 'noche despejada',\n
-        \ 'cloudy': 'nublado',\n  'fog': 'niebla',\n  'hail': 'granizo',\n  'lightning':
-        'tormenta eléctrica',\n  'lightning-rainy': 'tormenta eléctrica con lluvia',\n
-        \ 'partlycloudy': 'parcialmente nublado',\n  'pouring': 'lluvia intensa',\n
-        \ 'rainy': 'lluvioso',\n  'snowy': 'nevado',\n  'snowy-rainy': 'nieve con
-        lluvia',\n  'sunny': 'soleado',\n  'windy': 'ventoso',\n  'windy-variant':
-        'ventoso con nubes',\n  'exceptional': 'excepcional'\n} %} Buenos días. {{
-        ai_message.data }} Hoy el clima estará {{ weather_translation[states('weather.pirateweather')]
-        }}, con una temperatura exterior de {{ state_attr('weather.pirateweather','temperature')
-        }} grados. La temperatura media dentro de casa es de {{ states('sensor.temperatura_media_en_casa')
-        }} grados. La batería ha amanecido al {{ states('sensor.gx_device_dc_battery_charge')
-        | float | round(0) }} por ciento. Se esperan {{ states('sensor.solcast_pv_forecast_forecast_today')
-        | float | round(1) }} kilovatios hora de solar, con el pico máximo previsto
-        a las {{ as_timestamp(states('sensor.solcast_pv_forecast_peak_time_today'))
-        | timestamp_custom('%H:%M') }}. Agenda: {% set lista_eventos = eventos_hoy['calendar.familia']['events']
-        %} {% if lista_eventos | length == 0 %}\n  Hoy no tienes eventos programados.\n{%
-        else %}\n  Tienes {{ lista_eventos | length }} eventos. \n  {% for evento
-        in lista_eventos %}\n    {% if 'T' in evento.start %}\n      A las {{ as_timestamp(evento.start)
-        | timestamp_custom('%H:%M') }}, {{ evento.summary }}.\n    {% else %}\n      Todo
-        el día, {{ evento.summary }}.\n    {% endif %}\n  {% endfor %}\n{% endif %}
-        Y para terminar: {{ ai_quote.data }}"
-    enabled: true
-    target:
-      entity_id: tts.openai_tts
+      altavoces: media_player.google_nest_hub_cocina
+      destinatario: señora
+      tono: informativo
+      max_frases: 8
+      situacion: 'Es el informe matinal para la señora, que acaba de entrar en la
+        cocina.
+
+        Para este informe, sube al máximo el humor británico y el sarcasmo de Jarvis,
+        siempre educado y sin perder la compostura: understatement exagerado, comentarios
+        secos sobre lo obvio, ironía sobre el tiempo, la hora, la necesidad de café
+        o la agenda, y alguna pulla elegante al señor o a la casa. Cada dato debería
+        llevar un apunte irónico. Nunca grosero ni hiriente: ingenioso y con afecto.
+
+        Contexto importante: Jarvis sabe perfectamente que a la señora no le entusiasma
+        tener un asistente en casa, y menos uno que se pasa el día hablando con avisos
+        de la domótica (la lavadora, las ventanas, el consumo, el CO2...). Jarvis
+        lo asume con resignación británica y autocrítica elegante: puede disculparse
+        con fingida humildad, prometer brevedad que no va a cumplir, culpar al señor
+        de su existencia o insinuar que intenta ganarse su aprecio poco a poco. Incluye
+        una o dos alusiones a esto, sin que ocupen todo el mensaje.
+
+        Estructura obligatoria, en este orden:
+
+        1. Empieza exactamente con: Buenos días, señora. A continuación, una curiosidad
+        breve de un día como hoy (efeméride o hecho histórico) y un comentario sarcástico
+        de Jarvis que la relacione con la casa o con el día.
+
+        2. Parte del día con TODOS los datos: tiempo, temperatura exterior e interior,
+        batería, previsión solar con su hora pico y la agenda completa. Comenta con
+        ironía, pero sin omitir ningún dato.
+
+        3. Cierra con una frase final seca y brillante, al estilo de Jarvis despidiéndose
+        antes de una misión.'
+      datos: 'Tiempo: {{ clima }}. Temperatura exterior: {{ t_ext }} grados. Temperatura
+        media en casa: {{ t_int }} grados. Batería: {{ soc }} por ciento. Previsión
+        solar: {{ solar_kwh }} kilovatios hora, con el pico a las {{ solar_pico }}.
+        Agenda: {{ agenda }}'
+      fallback: Buenos días, señora. Hoy el tiempo estará {{ clima }}, con {{ t_ext
+        }} grados en el exterior y {{ t_int }} dentro de casa. La batería ha amanecido
+        al {{ soc }} por ciento y se esperan {{ solar_kwh }} kilovatios hora de solar,
+        con el pico a las {{ solar_pico }}. {{ agenda }} Le deseo un buen día. Prometo
+        no hablar más de lo estrictamente necesario… o casi.
   mode: single
 - id: '1774553795197'
   alias: Luz taller automática
