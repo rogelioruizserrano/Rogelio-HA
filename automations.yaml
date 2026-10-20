@@ -3550,7 +3550,7 @@
     value_template: "{{ this.attributes.last_triggered is none\n   or (this.attributes.last_triggered
       | as_local).date() != now().date() }}"
   - condition: time
-    after: 07:16:00
+    after: 06:45:00
     before: '12:00:00'
   actions:
   - action: media_player.turn_on
