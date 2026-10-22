@@ -242,7 +242,7 @@
       sequence:
       - action: light.turn_on
         target:
-          entity_id: light.shelly1mini_6055f99873c4_switch_0
+          entity_id: light.luz_armario_pasillo
         data: {}
     - conditions:
       - condition: state
@@ -250,9 +250,9 @@
         state: 'off'
       sequence:
       - action: light.turn_off
-        target:
-          entity_id: light.shelly1mini_6055f99873c4_switch_0
         data: {}
+        target:
+          entity_id: light.luz_armario_pasillo
   mode: restart
 - id: '1696677357517'
   alias: Notificaciones exceso de consumo de la red v4
