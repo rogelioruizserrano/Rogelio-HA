@@ -25,7 +25,7 @@
 #  round: 0
 
 - platform: integration
-  source: sensor.bateria_carga_mas_mppt
+  source: sensor.bateria_carga
   name: bateria_carga_kwh
   unit_prefix: k
   method: left
@@ -38,6 +38,7 @@
   unit_prefix: k
   method: left
   round: 0
+  unique_id: "bateria_descarga_kwh"
 
 # -----------------------------------------------------------------------------
 # Filtros — suavizado y medias móviles

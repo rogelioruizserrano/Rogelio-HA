@@ -242,7 +242,7 @@
       sequence:
       - action: light.turn_on
         target:
-          entity_id: light.luz_armario_pasillo
+          entity_id: light.luz_puerta_azotea
         data: {}
     - conditions:
       - condition: state
@@ -252,7 +252,7 @@
       - action: light.turn_off
         data: {}
         target:
-          entity_id: light.luz_armario_pasillo
+          entity_id: light.luz_puerta_azotea
   mode: restart
 - id: '1696677357517'
   alias: Notificaciones exceso de consumo de la red v4
@@ -1478,8 +1478,6 @@
       - target:
           entity_id:
           - light.luz_entradita
-          - light.lampara_escalera_bajo
-          - light.lampara_escalera_hall
           - light.lampara_techo_cine
           - light.wled
           - light.shellyplusrgbwpm_30c922570a00
@@ -1489,6 +1487,8 @@
           - light.luz_cocina
           - light.ventilador_salita
           - light.luz_bano
+          - light.luz_escalera_hall
+          - light.rele_escalera_bajo
         data: {}
         action: light.turn_off
       - action: switch.turn_off
@@ -1538,8 +1538,8 @@
         data: {}
         target:
           entity_id:
-          - light.lampara_escalera_bajo
-          - light.lampara_escalera_hall
+          - light.rele_escalera_bajo
+          - light.luz_escalera_hall
       alias: Luz escalera
     - conditions:
       - condition: template
@@ -1757,20 +1757,20 @@
 - id: '1721236870347'
   alias: Persiana de Rakel automatica
   description: ''
-  trigger:
+  triggers:
   - platform: state
     entity_id: sensor.sbht_003c_414a_temperature
     enabled: false
   - platform: time_pattern
     minutes: '30'
-  condition:
+  conditions:
   - condition: and
     conditions:
     - condition: state
       state: 'on'
       entity_id: input_boolean.persiana_automatica_temperatura
     enabled: true
-  action:
+  actions:
   - choose:
     - conditions:
       - condition: sun
@@ -1779,8 +1779,9 @@
         after_offset: '3'
       sequence:
       - action: cover.set_cover_position
-        data_template:
+        target:
           entity_id: cover.shellyplus2pm_b8d61a89c634
+        data:
           position: "{% set min_temp = 24 %}  {% set max_temp = 26 %}  {% set temp
             = states('sensor.sbht_003c_414a_temperature') | float(25) %} {% set min_position
             = 18 %}  {% set max_position = 100 %} {% if temp <= min_temp %}\n  {{
@@ -1833,24 +1834,26 @@
         entity_id: input_boolean.dia_de_riego_domingo
         state: 'on'
   actions:
-  - entity_id: switch.valvula_riego_patio_state
-    action: switch.turn_on
+  - action: switch.turn_on
+    target:
+      entity_id: switch.valvula_riego_patio_state
   - delay:
       minutes: '{{ states(''input_number.duracion_de_riego'') | int }}'
-  - entity_id: switch.valvula_riego_patio_state
-    action: switch.turn_off
+  - action: switch.turn_off
+    target:
+      entity_id: switch.valvula_riego_patio_state
   mode: single
 - id: '1721645539395'
   alias: Activar-desactivar persiana segun temperatura
   description: ''
-  trigger:
+  triggers:
   - platform: device
     device_id: 7dfb4fd24ececfca416a6a61b6f100c2
     domain: bthome
     type: button
     subtype: press
-  condition: []
-  action:
+  conditions: []
+  actions:
   - action: input_boolean.toggle
     metadata: {}
     data: {}

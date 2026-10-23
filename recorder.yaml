@@ -23,7 +23,6 @@ include:
     - sensor.red_mensual
     - sensor.red_total
     - sensor.shellyem_244cab418bca_channel_1_energy
-    - sensor.shellyem_244cab418bca_channel_1_energy_returned
     - sensor.shellyem_244cab418bca_channel_1_energy_returned_compensation
     - sensor.shellyem_244cab418bca_channel_1_power
     - sensor.shellyem_244cab418bca_channel_1_voltage
@@ -64,6 +63,7 @@ include:
     - sensor.victron_system_dc_pv_power_kwh_ano
     - sensor.victron_system_dc_pv_power_kwh_dia
     - sensor.victron_system_dc_pv_power_kwh_mes
+    - sensor.consumo_solar
 
     # ===== Solar / PV (SMA Sunny Boy) =====
     - sensor.sb5_0_1av_41_936_pv_current_a
@@ -85,11 +85,11 @@ include:
     - sensor.bateria_carga_diario
     - sensor.bateria_carga_kwh
     - sensor.bateria_carga_mensual
+    - sensor.bateria_descarga
     - sensor.bateria_descarga_anual
     - sensor.bateria_descarga_diario
     - sensor.bateria_descarga_mensual
     - sensor.bateria_soc
-    - sensor.hora_fin_bateria
 
     # ===== Batería (celdas Basen) =====
     - sensor.bateria_basen_maximum_cell_voltage
@@ -134,6 +134,7 @@ include:
     - sensor.esp32_pantalla_tianpower_bms_ble_device1_current
     - sensor.esp32_pantalla_tianpower_bms_ble_device1_delta_cell_voltage
     - sensor.esp32_pantalla_tianpower_bms_ble_device1_total_voltage
+    - sensor.bateria_basen_charge
 
     # ===== Inversor / Cerbo GX =====
     - number.gx_device_ess_max_charge_current
