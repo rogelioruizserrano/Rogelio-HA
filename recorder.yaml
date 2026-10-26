@@ -228,6 +228,10 @@ include:
     - sensor.cafetera_potencia
     - sensor.plancha_energia
     - sensor.plancha_potencia
+    - sensor.calentador_tortuguera_power
+    - sensor.calentador_tortuguera_energy
+    - sensor.filtro_tortuguera_power
+    - sensor.filtro_tortuguera_energy
 
 
 
