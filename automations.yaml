@@ -2384,25 +2384,29 @@
   mode: single
 - id: '1732645045820'
   alias: Inversor GRID/OFFGRID
-  description: ''
+  description: Gestiona cargas y avisos al perder o recuperar la red eléctrica.
   triggers:
   - trigger: state
-    entity_id:
-    - sensor.gx_device_ac_active_input_source
-  conditions:
-  - condition: state
-    entity_id: input_boolean.modo_vacaciones
-    state: 'off'
+    entity_id: sensor.gx_device_ac_active_input_source
+    to: not_connected
+    not_from:
+    - unavailable
+    - unknown
+    id: corte
+  - trigger: state
+    entity_id: sensor.gx_device_ac_active_input_source
+    from: not_connected
+    to: grid
+    for:
+      minutes: 1
+    id: vuelta
   actions:
   - choose:
     - conditions:
-      - condition: state
-        entity_id: sensor.gx_device_ac_active_input_source
-        state:
-        - not_connected
+      - condition: trigger
+        id: corte
       sequence:
       - action: switch.turn_off
-        data: {}
         target:
           entity_id:
           - switch.radiador_salita
@@ -2414,173 +2418,68 @@
           - switch.rele_aire_acondicionado
           - switch.secatoallas
           - switch.shelly1pmg4_e4b063679ed8
+          - switch.airfryer
+      - action: script.turn_on
+        target:
+          entity_id: script.inversor_aviso_de_red
+        data:
+          variables:
+            tipo: corte
+            voz: '{{ audio_ok }}'
     - conditions:
-      - condition: and
-        conditions:
-        - condition: state
-          entity_id: sensor.gx_device_ac_active_input_source
-          state:
-          - grid
-        - condition: time
-          after: '23:00:00'
-          before: 06:30:00
+      - condition: trigger
+        id: vuelta
+      - condition: template
+        value_template: '{{ not vacaciones }}'
+      sequence:
+      - if:
+        - condition: template
+          value_template: '{{ noche }}'
+        then:
+        - action: switch.turn_on
+          target:
+            entity_id:
+            - switch.termo_50l_switch_0
+            - switch.switch_termo_100l_00_00_00_cuartillo_azotea_interior
+            - switch.rele_aire_acondicionado
+        else:
+        - action: switch.turn_on
+          target:
+            entity_id:
+            - switch.secadora
+            - switch.lavavajillas
+            - switch.termo_50l_switch_0
+            - switch.switch_termo_100l_00_00_00_cuartillo_azotea_interior
+            - switch.rele_aire_acondicionado
+            - switch.secatoallas
+            - switch.shelly1pmg4_e4b063679ed8
+      - action: script.turn_on
+        target:
+          entity_id: script.inversor_aviso_de_red
+        data:
+          variables:
+            tipo: '{{ ''vuelta_noche'' if noche else ''vuelta_dia'' }}'
+            voz: '{{ audio_ok }}'
+      - if:
+        - condition: template
+          value_template: '{{ noche }}'
         - condition: state
           entity_id: input_boolean.termos_modo_invierno
           state: 'on'
-      sequence:
-      - action: switch.turn_on
-        data: {}
-        target:
-          entity_id:
-          - switch.termo_50l_switch_0
-          - switch.switch_termo_100l_00_00_00_cuartillo_azotea_interior
-          - switch.rele_aire_acondicionado
-      - delay:
-          minutes: 5
-      - action: switch.turn_on
-        data: {}
-        target:
-          entity_id:
-          - switch.pwm_manual_termo_50l
-          - switch.pwm_manual_termo_100l
-    - conditions:
-      - condition: and
-        conditions:
-        - condition: state
-          entity_id: sensor.gx_device_ac_active_input_source
-          state:
-          - grid
-        - condition: time
-          after: '23:00:00'
-          before: 06:30:00
-      sequence:
-      - action: switch.turn_on
-        data: {}
-        target:
-          entity_id:
-          - switch.termo_50l_switch_0
-          - switch.switch_termo_100l_00_00_00_cuartillo_azotea_interior
-          - switch.rele_aire_acondicionado
-    - conditions:
-      - condition: and
-        conditions:
-        - condition: state
-          entity_id: sensor.gx_device_ac_active_input_source
-          state:
-          - grid
-        - condition: time
-          after: 06:30:00
-          before: '23:00:00'
-      sequence:
-      - action: switch.turn_on
-        data: {}
-        target:
-          entity_id:
-          - switch.secadora
-          - switch.lavavajillas
-          - switch.termo_50l_switch_0
-          - switch.switch_termo_100l_00_00_00_cuartillo_azotea_interior
-          - switch.rele_aire_acondicionado
-          - switch.secatoallas
-          - switch.shelly1pmg4_e4b063679ed8
-    - conditions:
-      - condition: and
-        conditions:
-        - condition: state
-          entity_id: sensor.gx_device_ac_active_input_source
-          state:
-          - not_connected
-        - condition: time
-          after: 09:00:00
-          before: '22:00:00'
-      sequence:
-      - action: tts.google_say
-        data:
-          cache: true
-          message: Se ha ido la luz y la casa solo funciona con bateria y energia
-            solar. Se han desconectado los radiadores, los termos, electrodomésticos
-            y aire acondicionado.
-          entity_id: media_player.hilo_musical
-      - action: tts.google_say
-        data:
-          cache: true
-          message: Se ha ido la luz y la casa solo funciona con bateria y energia
-            solar. Se han desconectado los radiadores, los termos y los electrodomesticos.
-          language: es
-          entity_id: media_player.dormitorio
-    - conditions:
-      - condition: and
-        conditions:
-        - condition: state
-          entity_id: sensor.gx_device_ac_active_input_source
-          state:
-          - not_connected
-        - condition: time
-          after: '22:00:00'
-          before: 09:00:00
-      sequence:
-      - action: persistent_notification.create
-        data:
-          message: Se ha ido la luz y la casa solo funciona con bateria y energia
-            solar. Se han desconectado los radiadores, los termos, electrodomésticos
-            y aire acondicionado.
-          title: Energia
-      - action: notify.mobile_app_iphone_de_rogelio_ruiz_serrano
-        data:
-          message: Se ha ido la luz y la casa solo funciona con bateria y energia
-            solar. Se han desconectado los radiadores, los termos y los electrodomesticos.
-          title: Energia
-    - conditions:
-      - condition: and
-        conditions:
-        - condition: state
-          entity_id: sensor.gx_device_ac_active_input_source
-          state:
-          - grid
-        - condition: time
-          after: 09:00:00
-          before: '22:00:00'
-      sequence:
-      - action: tts.google_say
-        data:
-          cache: true
-          message: Se ha restablecido la red eléctrica. Se conectaran los electrodomésticos,
-            termos y aire acondicionado si estaba encendido. Los radiadores hay que
-            hacerlo manualmente si estaban encendidos.
-          entity_id: media_player.hilo_musical
-          language: es
-      - action: tts.google_say
-        data:
-          cache: true
-          message: Se ha restablecido la red eléctrica. Se conectaran los electrodomésticos,
-            termos y aire acondicionado si estaba encendido. Los radiadores hay que
-            hacerlo manualmente si estaban encendidos.
-          language: es
-          entity_id: media_player.dormitorio
-    - conditions:
-      - condition: and
-        conditions:
-        - condition: state
-          entity_id: sensor.gx_device_ac_active_input_source
-          state:
-          - grid
-        - condition: time
-          after: '22:00:00'
-          before: 09:00:00
-      sequence:
-      - action: persistent_notification.create
-        data:
-          message: Se ha restablecido la red eléctrica. Se conectaran los electrodomésticos,
-            termos y aire acondicionado si estaba encendido. Los radiadores hay que
-            hacerlo manualmente si estaban encendidos.
-          title: Energia
-      - action: notify.mobile_app_iphone_de_rogelio_ruiz_serrano
-        data:
-          message: Se ha restablecido la red eléctrica. Se conectaran los electrodomésticos,
-            termos y aire acondicionado si estaba encendido. Los radiadores hay que
-            hacerlo manualmente si estaban encendidos.
-          title: Energia
-  mode: single
+        then:
+        - delay:
+            minutes: 5
+        - action: switch.turn_on
+          target:
+            entity_id:
+            - switch.pwm_manual_termo_50l
+            - switch.pwm_manual_termo_100l
+  mode: restart
+  variables:
+    vacaciones: '{{ is_state(''input_boolean.modo_vacaciones'', ''on'') }}'
+    audio_ok: '{{ not vacaciones and today_at(''09:00'') <= now() < today_at(''22:00'')
+      }}'
+    noche: '{{ now() >= today_at(''23:00'') or now() < today_at(''06:30'') }}'
 - id: '1732734535017'
   alias: Shelly button
   description: ''
@@ -2967,44 +2866,45 @@
   mode: single
 - id: '1741563109826'
   alias: Notificación de batería baja
-  description: Envía una notificación persistente con TODOS los dispositivos que tienen
-    batería por debajo del 15% (excluyendo Apple).
+  description: Resumen de dispositivos con batería por debajo del 15% (excluyendo
+    Apple).
   triggers:
-  - entity_id: []
-    trigger: state
-    attribute: battery
-  conditions:
-  - condition: template
-    value_template: '{{ trigger.to_state.state | float < 15 }}'
+  - trigger: time
+    at: '20:00:00'
+  - trigger: homeassistant
+    event: start
   actions:
-  - data:
-      title: ⚠️ Dispositivos con batería baja (<15%)
-      message: "{% set ns = namespace(devices=[]) %}\n{% for state in states.sensor
-        | selectattr('attributes.device_class', 'eq', 'battery') %}\n  {% if (state.state
-        | float(99) < 15) and not (('iphone' in state.entity_id.lower() or 'ipad'
-        in state.entity_id.lower() or 'apple' in state.entity_id.lower() or 'watch'
-        in state.entity_id.lower()) or ('iPhone' in state.name or 'iPad' in state.name
-        or 'Apple' in state.name or 'Watch' in state.name)) %}\n    {% set ns.devices
-        = ns.devices + [state.name + ': ' + state.state + '%'] %}\n  {% endif %}\n{%
-        endfor %}\n{% if ns.devices %}\nDispositivos con batería baja:\n{{ ns.devices
-        | join('\n') }}\n{% else %}\nNo hay dispositivos con batería baja en este
-        momento.\n{% endif %}"
-      notification_id: bateria_baja_persistente
-    action: persistent_notification.create
-  - data:
-      title: ⚠️ Dispositivos con batería baja (<15%)
-      message: "{% set ns = namespace(devices=[]) %}\n{% for state in states.sensor
-        | selectattr('attributes.device_class', 'eq', 'battery') %}\n  {% if (state.state
-        | float(99) < 15) and not (('iphone' in state.entity_id.lower() or 'ipad'
-        in state.entity_id.lower() or 'apple' in state.entity_id.lower() or 'watch'
-        in state.entity_id.lower()) or ('iPhone' in state.name or 'iPad' in state.name
-        or 'Apple' in state.name or 'Watch' in state.name)) %}\n    {% set ns.devices
-        = ns.devices + [state.name + ': ' + state.state + '%'] %}\n  {% endif %}\n{%
-        endfor %}\n{% if ns.devices %}\nDispositivos con batería baja:\n{{ ns.devices
-        | join('\n') }}\n{% else %}\nNo hay dispositivos con batería baja en este
-        momento.\n{% endif %}"
-    action: notify.mobile_app_iphone_de_rogelio_ruiz_serrano
-  mode: parallel
+  - if:
+    - condition: template
+      value_template: '{{ dispositivos | count > 0 }}'
+    then:
+    - action: persistent_notification.create
+      data:
+        notification_id: bateria_baja_persistente
+        title: ⚠️ Dispositivos con batería baja (<15%)
+        message: '{{ dispositivos | join(''\n'') }}
+
+          '
+    - action: notify.mobile_app_iphone_de_rogelio_ruiz_serrano
+      data:
+        title: ⚠️ Batería baja
+        message: '{{ dispositivos | join(''\n'') }}
+
+          '
+    else:
+    - action: persistent_notification.dismiss
+      data:
+        notification_id: bateria_baja_persistente
+  variables:
+    dispositivos: "{% set excluir = ['iphone', 'ipad', 'apple', 'watch'] %} {% set
+      ns = namespace(l=[]) %} {% for s in states.sensor\n     | selectattr('attributes.device_class',
+      'defined')\n     | selectattr('attributes.device_class', 'eq', 'battery')\n
+      \    | rejectattr('state', 'in', ['unavailable', 'unknown']) %}\n  {% set texto
+      = (s.entity_id ~ ' ' ~ s.name) | lower %}\n  {% if s.state | float(100) < 15
+      and excluir | select('in', texto) | list | count == 0 %}\n    {% set ns.l =
+      ns.l + [s.name ~ ': ' ~ s.state ~ '%'] %}\n  {% endif %}\n{% endfor %} {{ ns.l
+      }}"
+  mode: single
 - id: '1742380853283'
   alias: Octopus tarifas
   description: ''
@@ -4685,28 +4585,43 @@
     - binary_sensor.bthome_sensor_7162_window
 - id: '1789598588202'
   alias: Restablecimiento progresivo de cargas
-  description: Reconecta cargas deslastradas de una en una según su consumo medido
+  description: Reconecta de una en una las cargas deslastradas, solo con red eléctrica,
+    si el consumo previsto cabe en el margen y dejando una espera entre cada reconexión.
+    Comprueba que cada carga se ha encendido y avisa al terminar.
   triggers:
   - trigger: time_pattern
     minutes: /3
   conditions:
+  - condition: state
+    entity_id: sensor.gx_device_ac_active_input_source
+    state: grid
   - condition: template
-    value_template: '{% set p = (states(''input_text.deslastre_cargas'') | from_json(default={})).get(''p'')
-      %} {{ p is mapping and p | count > 0 }}'
+    value_template: "{% set p = (states('input_text.deslastre_cargas')\n            |
+      from_json(default={})).get('p') %}\n{{ p is mapping and p | count > 0 }}"
   actions:
   - variables:
       estado: '{{ states(''input_text.deslastre_cargas'') | from_json(default={})
         }}'
       pendientes: '{{ estado.get(''p'', {}) }}'
-      restaurados: '{{ estado.get(''r'', []) }}'
       siguiente: "{{ orden_restauracion | select('in', pendientes.keys() | list)\n
         \  | list | first | default('') }}"
-      previsto: '{{ [ (pendientes.get(siguiente, 0) * factor) | int, minimo_previsto
-        ] | max }}'
+      previsto: "{{ [ (pendientes.get(siguiente, 0) | float(0) * factor) | int,\n
+        \    minimo_previsto ] | max }}"
       red: '{{ states(''sensor.red_total'') | float(99999) }}'
+      espera_ok: '{{ now().timestamp() - (estado.get(''ts'', 0) | float(0)) > espera_min
+        * 60 }}'
+  - if:
+    - condition: template
+      value_template: '{{ siguiente == '''' }}'
+    then:
+    - action: input_text.set_value
+      target:
+        entity_id: input_text.deslastre_cargas
+      data:
+        value: ''
+    - stop: Sin cargas conocidas pendientes
   - condition: template
-    value_template: "{{ siguiente != ''\n   and now().timestamp() - estado.get('ts',
-      0) > espera_min * 60\n   and red + previsto < margen }}"
+    value_template: '{{ espera_ok and red + previsto < margen }}'
   - choose:
     - conditions:
       - condition: template
@@ -4717,7 +4632,8 @@
         target:
           entity_id: climate.casa
         data:
-          hvac_mode: '{{ estado.get(''m'') or ''cool'' }}'
+          hvac_mode: "{{ estado.get('m') or\n   ('cool' if now().month in [5, 6, 7,
+            8, 9, 10] else 'heat') }}"
       - if:
         - condition: template
           value_template: '{{ estado.get(''t'') is number }}'
@@ -4734,42 +4650,68 @@
       continue_on_error: true
       target:
         entity_id: '{{ cargas[siguiente] }}'
+  - delay: 00:00:05
   - variables:
-      restantes: '{{ dict(pendientes.items() | rejectattr(''0'', ''eq'', siguiente)
-        | list) }}'
-      restaurados: '{{ restaurados + [siguiente] }}'
+      ok: "{% if siguiente == 'aa' %}\n  {{ states('climate.casa') not in ['off',
+        'unavailable', 'unknown'] }}\n{% else %}\n  {{ is_state(cargas[siguiente],
+        'on') }}\n{% endif %}"
+  - variables:
+      actual: '{{ states(''input_text.deslastre_cargas'') | from_json(default={})
+        }}'
+      restantes: "{% set ns = namespace(d={}) %} {% for k, v in actual.get('p', {}).items()\n
+        \    if k != siguiente and k in cargas %}\n  {% set ns.d = dict(ns.d.items()
+        | list\n                     + [(k, v | float(0) | round(0) | int)]) %}\n{%
+        endfor %} {{ ns.d }}"
+      restaurados: '{{ (actual.get(''r'', []) + ([siguiente] if ok else [])) | unique
+        | list }}'
+      fallidos: '{{ (actual.get(''f'', []) + ([] if ok else [siguiente])) | unique
+        | list }}'
   - action: input_text.set_value
     target:
       entity_id: input_text.deslastre_cargas
     data:
       value: '{% if restantes | count > 0 %}{{ {''p'': restantes, ''r'': restaurados,
-        ''m'': estado.get(''m''), ''t'': estado.get(''t''), ''ts'': estado.get(''ts'',
-        0)} | to_json }}{% endif %}'
+        ''f'': fallidos, ''m'': actual.get(''m''), ''t'': actual.get(''t''), ''ts'':
+        now().timestamp() | int} | to_json }}{% endif %}'
+  - if:
+    - condition: template
+      value_template: '{{ not ok }}'
+    then:
+    - action: notify.mobile_app_iphone_de_rogelio_ruiz_serrano
+      data:
+        title: Consumo energético
+        message: No se ha podido reconectar {{ nombres[siguiente] }} ({{ cargas[siguiente]
+          }}). Revísalo manualmente.
   - if:
     - condition: template
       value_template: '{{ restantes | count == 0 }}'
     then:
     - variables:
-        lista_nombres: '{% set ns = namespace(l=[]) %}{% for k in restaurados | unique
-          %}{% set ns.l = ns.l + [nombres[k]] %}{% endfor %}{{ ns.l | join('', '')
-          }}'
+        lista_ok: '{% set ns = namespace(l=[]) %}{% for k in restaurados %}{% set
+          ns.l = ns.l + [nombres.get(k, k)] %}{% endfor %}{{ ns.l | join('', '') }}'
+        lista_fallo: '{% set ns = namespace(l=[]) %}{% for k in fallidos %}{% set
+          ns.l = ns.l + [nombres.get(k, k)] %}{% endfor %}{{ ns.l | join('', '') }}'
         consumo_actual: '{{ states(''sensor.red_total'') | float(0) | round(0) | int
           }}'
     - action: notify.mobile_app_iphone_de_rogelio_ruiz_serrano
       data:
         title: Consumo energético
-        message: 'Cargas restablecidas: {{ lista_nombres }}. Consumo actual de red:
-          {{ consumo_actual }} W.'
+        message: '{% if lista_ok %}Cargas restablecidas: {{ lista_ok }}. {% endif
+          %} {% if lista_fallo %}No se pudieron reconectar: {{ lista_fallo }}. {%
+          endif %} Consumo actual de red: {{ consumo_actual }} W.'
     - action: script.jarvis_hablar
       data:
         tono: informativo
         solo_de_dia: true
         situacion: 'Tras el pico de consumo de antes, Jarvis ha vuelto a conectar
-          de una en una todas las cargas que había desconectado: {{ lista_nombres
-          }}. El consumo de la red es ahora de {{ consumo_actual }} vatios, dentro
-          del límite. Todo vuelve a la normalidad.'
-        fallback: Señor, he restablecido todas las cargas desconectadas. El consumo
-          de la red está de nuevo bajo control.
+          de una en una las cargas que había desconectado {%- if lista_ok %}: {{ lista_ok
+          }}{% endif %}. {% if lista_fallo %}No ha podido reconectar {{ lista_fallo
+          }}, que habrá que revisar a mano. {% endif %} El consumo de la red es ahora
+          de {{ consumo_actual }} vatios, dentro del límite.'
+        fallback: '{% if lista_fallo %}Señor, he restablecido las cargas, pero no
+          he podido reconectar {{ lista_fallo }}.{% else %}Señor, he restablecido
+          todas las cargas desconectadas. El consumo de la red está de nuevo bajo
+          control.{% endif %}'
   mode: single
   max_exceeded: silent
   variables:

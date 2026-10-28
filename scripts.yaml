@@ -302,3 +302,72 @@ jarvis_hablar:
         generado_por_ia: '{{ mensaje != fallback }}'
   - stop: Mensaje reproducido
     response_variable: resultado
+inversor_aviso_de_red:
+  alias: Inversor · aviso de red
+  description: Avisa por móvil y por voz (Jarvis) de cortes y vuelta de la red.
+  mode: queued
+  fields:
+    tipo:
+      name: Tipo
+      required: true
+      selector:
+        select:
+          options:
+          - corte
+          - vuelta_dia
+          - vuelta_noche
+    voz:
+      name: Aviso por voz
+      default: true
+      selector:
+        boolean: {}
+  sequence:
+  - variables:
+      titulo: "{{ '⚡ Corte de luz' if tipo == 'corte' else '\U0001F50C Red restablecida'
+        }}"
+      mensaje: '{% if tipo == ''corte'' %} Se ha ido la luz. La casa funciona con
+        batería y solar. Se han desconectado radiadores, termos, electrodomésticos
+        y aire acondicionado. {% elif tipo == ''vuelta_noche'' %} Red restablecida.
+        Se han encendido los termos y el aire acondicionado. Los radiadores hay que
+        encenderlos manualmente. {% else %} Red restablecida. Se han encendido los
+        termos, los electrodomésticos y el aire acondicionado. Los radiadores hay
+        que encenderlos manualmente. {% endif %}'
+      situacion: '{% if tipo == ''corte'' %} Se acaba de ir la luz de la red eléctrica
+        y la casa funciona ahora solo con la batería y las placas solares. Jarvis
+        ha desconectado los radiadores, los termos, la secadora, el lavavajillas,
+        el secatoallas, la freidora de aire y el aire acondicionado para no agotar
+        la batería. {% elif tipo == ''vuelta_noche'' %} Ha vuelto la red eléctrica
+        tras un corte de luz. Jarvis ha vuelto a encender los termos y el aire acondicionado.
+        Los radiadores no se encienden solos: si estaban en uso hay que encenderlos
+        a mano. {% else %} Ha vuelto la red eléctrica tras un corte de luz. Jarvis
+        ha vuelto a encender los termos, la secadora, el lavavajillas, el secatoallas
+        y el aire acondicionado. Los radiadores no se encienden solos: si estaban
+        en uso hay que encenderlos a mano. {% endif %}'
+      fallback: '{% if tipo == ''corte'' %} Señor, se ha ido la luz. Funcionamos con
+        batería y solar, y he desconectado las cargas grandes. {% else %} Señor, ha
+        vuelto la red eléctrica. He reconectado las cargas; los radiadores tendrá
+        que encenderlos usted. {% endif %}'
+      urgencia: '{{ ''time-sensitive'' if tipo == ''corte'' else ''active'' }}'
+  - parallel:
+    - action: notify.mobile_app_iphone_de_rogelio_ruiz_serrano
+      data:
+        title: '{{ titulo }}'
+        message: '{{ mensaje }}'
+        data:
+          push:
+            interruption-level: '{{ urgencia }}'
+    - action: persistent_notification.create
+      data:
+        notification_id: inversor_red
+        title: Energía
+        message: '{{ mensaje }}'
+  - if:
+    - condition: template
+      value_template: '{{ voz }}'
+    then:
+    - action: script.jarvis_hablar
+      data:
+        tono: informativo
+        solo_de_dia: true
+        situacion: '{{ situacion }}'
+        fallback: '{{ fallback }}'
