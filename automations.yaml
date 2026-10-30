@@ -2896,14 +2896,13 @@
       data:
         notification_id: bateria_baja_persistente
   variables:
-    dispositivos: "{% set excluir = ['iphone', 'ipad', 'apple', 'watch'] %} {% set
-      ns = namespace(l=[]) %} {% for s in states.sensor\n     | selectattr('attributes.device_class',
-      'defined')\n     | selectattr('attributes.device_class', 'eq', 'battery')\n
-      \    | rejectattr('state', 'in', ['unavailable', 'unknown']) %}\n  {% set texto
-      = (s.entity_id ~ ' ' ~ s.name) | lower %}\n  {% if s.state | float(100) < 15
-      and excluir | select('in', texto) | list | count == 0 %}\n    {% set ns.l =
-      ns.l + [s.name ~ ': ' ~ s.state ~ '%'] %}\n  {% endif %}\n{% endfor %} {{ ns.l
-      }}"
+    dispositivos: "{% set excluir = ['iphone', 'ipad', 'apple', 'watch', 'sensor.gx_device_dynamic_ess_target_soc']
+      %} {% set ns = namespace(l=[]) %} {% for s in states.sensor\n    | selectattr('attributes.device_class',
+      'defined')\n    | selectattr('attributes.device_class', 'eq', 'battery')\n    |
+      rejectattr('state', 'in', ['unavailable', 'unknown']) %}\n  {% set texto = (s.entity_id
+      ~ ' ' ~ s.name) | lower %}\n  {% if s.state | float(100) < 15 and excluir |
+      select('in', texto) | list | count == 0 %}\n    {% set ns.l = ns.l + [s.name
+      ~ ': ' ~ s.state ~ '%'] %}\n  {% endif %}\n{% endfor %} {{ ns.l }}"
   mode: single
 - id: '1742380853283'
   alias: Octopus tarifas
@@ -3992,30 +3991,26 @@
   alias: Abrir/Cerrar persiana con pulsador
   description: ''
   triggers:
-  - device_id: b1cc28fc434b85808063a29ae6a96159
-    domain: shelly
-    type: double_push
-    subtype: button1
-    trigger: device
-    enabled: false
-  - device_id: b1cc28fc434b85808063a29ae6a96159
-    domain: shelly
-    type: long_push
-    subtype: button1
-    trigger: device
-    enabled: false
   - trigger: state
     entity_id:
     - event.shellyplus1_441793a404d0_input_0
     attribute: event_type
+    to:
+    - long
+  - trigger: state
+    entity_id:
+    - event.shellyix3_483fda8d421c_channel_2
+    attribute: event_type
+    to:
+    - long
   conditions: []
   actions:
   - choose:
     - conditions:
       - condition: state
-        entity_id: event.shellyplus1_441793a404d0_input_0
+        entity_id: event.shellyix3_483fda8d421c_channel_2
         state:
-        - double_push
+        - long
         attribute: event_type
       sequence:
       - action: cover.close_cover
