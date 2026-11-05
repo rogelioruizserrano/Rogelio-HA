@@ -273,7 +273,6 @@ automation:
           - update.home_assistant_operating_system_update
           - update.home_assistant_supervisor_update
           - update.esphome_update_2
-          - update.hacs_update
         from: "off"
         to: "on"
 
@@ -622,7 +621,6 @@ automation:
                     update.home_assistant_operating_system_update: HA OS
                     update.home_assistant_supervisor_update: Supervisor
                     update.esphome_update_2: ESPHome
-                    update.hacs_update: HACS
               - action: script.dial_notificar
                 data:
                   titulo: Update
