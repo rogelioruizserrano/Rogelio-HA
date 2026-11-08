@@ -219,13 +219,6 @@
   - entity_id:
     - binary_sensor.puerta_escalera_azotea_contact
     trigger: state
-    from: 'off'
-    to: 'on'
-  - entity_id:
-    - binary_sensor.puerta_escalera_azotea_contact
-    trigger: state
-    from: 'on'
-    to: 'off'
   conditions:
   - condition: sun
     before: sunrise
@@ -4928,8 +4921,8 @@
   mode: single
 - id: '1792191622568'
   alias: Electrodomésticos - fin de ciclo
-  description: Jarvis avisa cuando terminan el lavavajillas, la lavadora o la secadora
-    (09:00–22:00)
+  description: Avisa por voz cuando terminan el lavavajillas, la lavadora o la secadora
+    (09:00–22:00). El estilo lo pone el script de voz.
   triggers:
   - trigger: state
     entity_id: binary_sensor.lavavajillas_funcionando
@@ -4960,7 +4953,7 @@
       datos: 'Duración aproximada del ciclo: {{ minutos }} minutos'
       situacion: '{{ aparato.nombre | capitalize }} acaba de terminar su ciclo.'
       peticion: '{{ aparato.peticion }}'
-      fallback: Señor, {{ aparato.nombre }} ha terminado. {{ aparato.fallback }}
+      fallback: '{{ aparato.fallback }}'
   mode: parallel
   max: 3
   variables:
@@ -4968,12 +4961,13 @@
       lavavajillas:
         nombre: el lavavajillas
         peticion: que vacíe el lavavajillas cuando le venga bien
-        fallback: La vajilla le espera, impecable.
+        fallback: El lavavajillas ha terminado, la vajilla ya se puede sacar.
       lavadora:
         nombre: la lavadora
         peticion: que tienda la ropa pronto, antes de que coja olor a humedad
-        fallback: Le sugiero tender la ropa antes de que se arrugue.
+        fallback: La lavadora ha terminado, conviene tender la ropa pronto.
       secadora:
         nombre: la secadora
         peticion: que saque la ropa ya, mientras está caliente, para que no se arrugue
-        fallback: Conviene sacar la ropa ahora que aún está caliente.
+        fallback: La secadora ha terminado, conviene sacar la ropa ahora que está
+          caliente.

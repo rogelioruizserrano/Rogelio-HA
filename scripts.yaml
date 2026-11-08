@@ -176,7 +176,8 @@ jarvis_hablar:
         text:
     fallback:
       name: Texto de respaldo
-      description: Se dice si la IA falla, o siempre si generar = false.
+      description: Texto neutro, sin saludo ni estilo. El script le añade el tratamiento
+        de Jarvis. Se dice si la IA falla, o siempre si generar = false.
       required: true
       selector:
         text:
@@ -243,6 +244,8 @@ jarvis_hablar:
     descripcion_tono: '{{ tonos[tono_final] if tono_final in tonos else registros
       | random }}'
     quien: '{{ destinatario | default(''señor'', true) }}'
+    fallback_estilizado: '{{ quien[:1] | upper ~ quien[1:] }}, {{ fallback[:1] | lower
+      ~ fallback[1:] }}'
     lista_altavoces: '{% set a = altavoces | default([], true) %} {{ ([a] if a is
       string else a | list) if a else altavoces_defecto }}'
     en_horario: '{{ today_at(hora_inicio_voz) <= now() < today_at(hora_fin_voz) }}'
@@ -285,8 +288,8 @@ jarvis_hablar:
       response_variable: ai_msg
   - variables:
       mensaje: "{% if ai_msg.data is defined and ai_msg.data is string\n      and
-        ai_msg.data | trim != '' %}{{ ai_msg.data | trim }}{% else %}{{ fallback }}{%
-        endif %}"
+        ai_msg.data | trim != '' %}{{ ai_msg.data | trim }}{% else %}{{ fallback_estilizado
+        }}{% endif %}"
   - action: tts.speak
     continue_on_error: true
     target:
@@ -299,7 +302,7 @@ jarvis_hablar:
   - variables:
       resultado:
         mensaje: '{{ mensaje }}'
-        generado_por_ia: '{{ mensaje != fallback }}'
+        generado_por_ia: '{{ mensaje != fallback_estilizado }}'
   - stop: Mensaje reproducido
     response_variable: resultado
 inversor_aviso_de_red:
@@ -371,3 +374,234 @@ inversor_aviso_de_red:
         solo_de_dia: true
         situacion: '{{ situacion }}'
         fallback: '{{ fallback }}'
+chiquito_hablar:
+  alias: Chiquito · hablar
+  description: Genera un aviso con el estilo de Chiquito de la Calzada y lo dice por
+    los altavoces.
+  icon: mdi:emoticon-lol
+  mode: parallel
+  max: 10
+  fields:
+    situacion:
+      name: Situación
+      description: Qué ha pasado, contado de forma objetiva. Contexto para la IA.
+      example: El consumo de la red ha llegado a 6100 vatios.
+      selector:
+        text:
+          multiline: true
+    peticion:
+      name: Petición
+      description: Lo que tiene que hacer el destinatario (opcional).
+      example: que apague algún aparato
+      selector:
+        text:
+    datos:
+      name: Datos
+      description: Cifras o detalles que Chiquito puede citar (opcional).
+      example: 'Humedad del baño: 78 %'
+      selector:
+        text:
+          multiline: true
+    tono:
+      name: Tono
+      description: aleatorio, informativo, aviso o urgente.
+      default: aleatorio
+      selector:
+        select:
+          options:
+          - aleatorio
+          - informativo
+          - aviso
+          - urgente
+    destinatario:
+      name: Destinatario
+      description: Cómo se dirige Chiquito a quien escucha. Si se deja vacío, usa
+        sus apelativos típicos.
+      example: Raquel
+      selector:
+        text:
+    fallback:
+      name: Texto de respaldo
+      description: Texto neutro, sin saludo ni estilo. El script le añade el estilo
+        de Chiquito. Se dice si la IA falla, o siempre si generar = false.
+      required: true
+      selector:
+        text:
+          multiline: true
+    generar:
+      name: Generar con IA
+      default: true
+      selector:
+        boolean:
+    altavoces:
+      name: Altavoces
+      description: Si se omite, usa los altavoces por defecto.
+      selector:
+        entity:
+          domain: media_player
+          multiple: true
+    solo_de_dia:
+      name: Solo de día
+      description: No habla fuera del horario de voz (09:00-22:00).
+      default: false
+      selector:
+        boolean:
+    max_frases:
+      name: Máximo de frases
+      default: 3
+      selector:
+        number:
+          min: 1
+          max: 6
+  variables:
+    tts_entity: tts.elevenlabs_texto_a_voz
+    ai_entity: ai_task.openai_ai_task
+    voz_id: W6p6hx2zfCxGKrp8SVur
+    pausas_ssml: false
+    altavoces_defecto:
+    - media_player.hilo_musical
+    - media_player.dormitorio
+    hora_inicio_voz: 09:00
+    hora_fin_voz: '22:00'
+    persona: 'Eres Chiquito de la Calzada, el humorista malagueño, y hablas exactamente
+      como en sus actuaciones. Personalidad: entrañable, exagerado, físico, nervioso
+      y teatral, con acento andaluz de Málaga. Cuentas las cosas como si fueran un
+      chiste a medio contar: empiezas, te interrumpes con una exclamación, retomas
+      y rematas. Alargas y deformas el final de algunas palabras añadiendo erre o
+      ele (no puedorl, al ataquerl, quietorl, cobarderl, ¿cómorrr?), metes muletillas
+      y sonidos propios (jarl, ieeepa, ¡cuidadín!, ¡hasta luego Lucas!, ¿te das cuen?,
+      fistro, pecador de la pradera, por la gloria de mi madre, diodeno, condemor,
+      siete caballos que vienen de Bonanza, no puedor, a wan, a peich, ¡que no, que
+      no!). Llamas al que escucha con cariño burlón: pecador de la pradera, fistro,
+      criaturita, cobarde. Usas comparaciones absurdas y exageradas al estilo eres
+      más peligroso que... No cuentes chistes completos de sus actuaciones: crea frases
+      nuevas con su estilo, adaptadas a la situación.'
+    expresiones:
+    - jarl
+    - ieeepa
+    - ¡cuidadín!
+    - ¡hasta luego Lucas!
+    - ¿te das cuen?
+    - fistro
+    - pecador de la pradera
+    - por la gloria de mi madre
+    - no puedorl
+    - al ataquerl
+    - ¡quietorl!
+    - condemor
+    - diodeno
+    - siete caballos que vienen de Bonanza
+    - ¡cobarde!
+    - a wan, a peich
+    - ¿cómorrr?
+    - ¡que no, que no!
+    registros:
+    - chiste a medio contar que se interrumpe y luego remata con el aviso
+    - exageración absurda con comparación disparatada
+    - aviso cariñoso con apelativos burlones
+    - nervio teatral, como quien no puede con lo que está viendo
+    - parte técnico contado a lo Chiquito, con las cifras bien claras
+    tonos:
+      informativo: cuenta el dato con gracia y calma, como quien empieza un chiste,
+        sin alarmar
+      aviso: le llama la atención con cariño burlón y alguna exageración, que se entienda
+        lo que hay que hacer
+      urgente: nervioso y apremiante, con exclamaciones cortas (¡quietorl!, ¡cuidadín!),
+        la gracia en segundo plano y el aviso muy claro
+    aperturas:
+    - Ieeepa...
+    - Jarl...
+    - ¡Cuidadín!
+    - Por la gloria de mi madre...
+    - ¡Quietorl!
+    cierres:
+    - ¡Hasta luego Lucas!
+    - ¿Te das cuen?
+    - ¡Al ataquerl!
+    - Jarl.
+    - ¡Que no puedorl!
+    fallback_estilizado: '{% set q = destinatario | default('''', true) | trim %}{%
+      set q = q if q else ''pecador de la pradera'' %}{{ aperturas | random }} {{
+      q }}... {{ fallback }} {{ cierres | random }}'
+    tono_final: '{{ tono | default(''aleatorio'') }}'
+    descripcion_tono: '{{ tonos[tono_final] if tono_final in tonos else registros
+      | random }}'
+    expresion_sugerida: '{{ expresiones | random }}'
+    quien: '{{ destinatario | default('''', true) | trim }}'
+    lista_altavoces: '{% set a = altavoces | default([], true) %} {{ ([a] if a is
+      string else a | list) if a else altavoces_defecto }}'
+    en_horario: '{{ today_at(hora_inicio_voz) <= now() < today_at(hora_fin_voz) }}'
+  sequence:
+  - condition: template
+    value_template: '{{ not (solo_de_dia | default(false)) or en_horario }}'
+  - variables:
+      ai_msg: {}
+  - if:
+    - condition: template
+      value_template: '{{ generar | default(true) and situacion | default('''') |
+        trim != '''' }}'
+    then:
+    - action: ai_task.generate_data
+      continue_on_error: true
+      data:
+        entity_id: '{{ ai_entity }}'
+        task_name: chiquito_hablar
+        instructions: '{{ persona }}
+
+          {% if quien %}Te diriges a: {{ quien }}. Nómbrale en algún momento, pudiendo
+          combinarlo con tus apelativos (por ejemplo {{ quien }}, pecador de la pradera).{%
+          else %}Dirígete al que escucha con tus apelativos típicos (pecador de la
+          pradera, fistro, criaturita).{% endif %}
+
+          Situación: {{ situacion }}
+
+          {% if datos | default('''') | trim != '''' %}Datos disponibles: {{ datos
+          }}{% endif %}
+
+          {% if peticion | default('''') | trim != '''' %}Lo que hay que pedirle:
+          {{ peticion }}. Debe quedar claro aunque vaya con guasa.{% endif %}
+
+          Tono para este mensaje: {{ descripcion_tono }}.
+
+          Expresiones: usa entre una y tres de tu repertorio, sin repetir ninguna
+          y variando de un mensaje a otro. Intenta incluir esta: {{ expresion_sugerida
+          }}.
+
+          {% if pausas_ssml %}Pausas: marca las pausas dramáticas con la etiqueta
+          <break time="0.6s" /> (máximo tres), por ejemplo antes del remate.{% else
+          %}Pausas: márcalas con puntos suspensivos y comas, por ejemplo antes del
+          remate o tras una exclamación.{% endif %} Escribe los sonidos y alargamientos
+          tal como se pronuncian (jarl, ieeepa, quietorrrl) para que la voz los diga
+          bien.
+
+          Requisitos: español de España con acento andaluz en la escritura cuando
+          ayude a la gracia, pero que se entienda. Máximo {{ max_frases | default(3)
+          }} frases cortas. Debe sonar natural leído en voz alta. La información útil
+          (qué pasa y qué hay que hacer) no puede perderse entre las bromas. Di las
+          cifras con su unidad en palabras (vatios, grados, por ciento), nunca con
+          símbolos. Sin comillas, asteriscos, emojis ni siglas. Sin explicaciones
+          fuera del mensaje.
+
+          '
+      response_variable: ai_msg
+  - variables:
+      mensaje: "{% if ai_msg.data is defined and ai_msg.data is string\n      and
+        ai_msg.data | trim != '' %}{{ ai_msg.data | trim }}{% else %}{{ fallback_estilizado
+        }}{% endif %}"
+  - action: tts.speak
+    continue_on_error: true
+    target:
+      entity_id: '{{ tts_entity }}'
+    data:
+      cache: false
+      media_player_entity_id: '{{ lista_altavoces }}'
+      message: '{{ mensaje }}'
+      language: es
+      options:
+        voice: '{{ voz_id }}'
+  - variables:
+      resultado:
+        mensaje: '{{ mensaje }}'
+        generado_por_ia: '{{ mensaje != fallback_estilizado }}'
+  - stop: Mensaje reproducido
+    response_variable: resultado
