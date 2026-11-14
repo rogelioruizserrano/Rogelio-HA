@@ -216,34 +216,39 @@
   alias: Luz puerta azotea
   description: ''
   triggers:
-  - entity_id:
-    - binary_sensor.puerta_escalera_azotea_contact
-    trigger: state
-  conditions:
-  - condition: sun
-    before: sunrise
-    after: sunset
+  - trigger: state
+    entity_id: binary_sensor.puerta_escalera_azotea_contact
+    from: 'off'
+    to: 'on'
+    id: abierta
+  - trigger: state
+    entity_id: binary_sensor.puerta_escalera_azotea_contact
+    to: 'off'
+    id: cerrada
+  - trigger: sun
+    event: sunrise
+    offset: 00:15:00
+    id: amanecer
+  conditions: []
   actions:
   - choose:
     - conditions:
-      - condition: or
-        conditions:
-        - condition: state
-          entity_id: binary_sensor.puerta_escalera_azotea_contact
-          state: 'on'
-          enabled: true
+      - condition: trigger
+        id: abierta
+      - condition: sun
+        after: sunset
+        before: sunrise
       sequence:
       - action: light.turn_on
         target:
           entity_id: light.luz_puerta_azotea
-        data: {}
     - conditions:
-      - condition: state
-        entity_id: binary_sensor.puerta_escalera_azotea_contact
-        state: 'off'
+      - condition: trigger
+        id:
+        - cerrada
+        - amanecer
       sequence:
       - action: light.turn_off
-        data: {}
         target:
           entity_id: light.luz_puerta_azotea
   mode: restart

@@ -196,7 +196,8 @@ jarvis_hablar:
           multiple: true
     solo_de_dia:
       name: Solo de día
-      description: No habla fuera del horario de voz (09:00-22:00).
+      description: No habla fuera del horario de voz (09:00-22:00). La franja de silencio
+        de 15:30 a 17:00 se aplica siempre, salvo tono urgente.
       default: false
       selector:
         boolean:
@@ -215,6 +216,8 @@ jarvis_hablar:
     - media_player.dormitorio
     hora_inicio_voz: 09:00
     hora_fin_voz: '22:00'
+    silencio_inicio: '15:30'
+    silencio_fin: '17:00'
     persona: 'Eres J.A.R.V.I.S., el asistente de inteligencia artificial de la casa,
       y hablas exactamente como en las películas de Iron Man cuando te diriges a Tony
       Stark. Personalidad: mayordomo británico digital, formal, impecable, sereno
@@ -249,9 +252,12 @@ jarvis_hablar:
     lista_altavoces: '{% set a = altavoces | default([], true) %} {{ ([a] if a is
       string else a | list) if a else altavoces_defecto }}'
     en_horario: '{{ today_at(hora_inicio_voz) <= now() < today_at(hora_fin_voz) }}'
+    en_silencio: '{{ today_at(silencio_inicio) <= now() < today_at(silencio_fin) }}'
   sequence:
   - condition: template
     value_template: '{{ not (solo_de_dia | default(false)) or en_horario }}'
+  - condition: template
+    value_template: '{{ not en_silencio or tono_final == ''urgente'' }}'
   - variables:
       ai_msg: {}
   - if:
