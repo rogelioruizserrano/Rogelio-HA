@@ -20,12 +20,6 @@ api:
 ota:
   - platform: esphome
     password: !secret athom_rf_ir_remote_353874__ota_password
-    on_begin:
-      then:
-        - esp32_ble_tracker.stop_scan:
-    on_error:
-      then:
-        - esp32_ble_tracker.start_scan:
 
 wifi:
   ssid: !secret wifi_ssid
