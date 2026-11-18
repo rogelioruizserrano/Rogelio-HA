@@ -30,10 +30,8 @@ wifi:
 # Proxy BLE advertising para ha-ble-adv (ventilador Mantra)
 external_components:
   - source: github://NicoIIT/esphome-ble_adv_proxy
-
-ble_adv_proxy:
-  use_max_tx_power: true   # quítalo si diera problemas de compilación
-
+    refresh: always
+    
 # Añadir dump raw al receptor RF del paquete (merge por id con !extend)
 remote_receiver:
   - id: !extend rf_receiver
