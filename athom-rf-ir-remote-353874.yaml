@@ -19,7 +19,7 @@ api:
 
 ota:
   - platform: esphome
-    password: !secret athom_rf_ir_remote_353874__ota_password
+    encryption:
 
 wifi:
   ssid: !secret wifi_ssid
