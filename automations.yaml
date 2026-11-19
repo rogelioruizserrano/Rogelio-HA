@@ -5113,3 +5113,140 @@
     soc: '{{ states(''sensor.gx_device_dc_battery_charge'') | float(0) }}'
     cargando: '{{ is_state(''select.gx_device_ess_batterylife_state'', modo_carga)
       }}'
+- id: '1794984390409'
+  alias: Carga bateria en Valle automatica v3.0.3 (corregida)
+  description: 'v3.0 - Rediseno por eventos (sin esperas largas, robusta a reinicios
+    de HA). Ventana de carga 00:00-08:00 todos los dias (L-V y fin de semana). Forecast
+    > 30 kWh: sin carga. 20-30 kWh: mantener 50% (con histeresis). < 20 kWh o Solcast
+    obsoleto: carga desde red toda la ventana, aunque el SOC llegue a 100% (absorcion/equilibrado),
+    hasta las 08:00 o cambio a Llano. Parametros editables en trigger_variables. v3.0.2:
+    forecast_remaining_today; ejecucion manual evalua la carga. v3.0.3: opciones del
+    select en minusculas (nueva integracion Victron).'
+  triggers:
+  - trigger: time_pattern
+    minutes: 0
+  - trigger: homeassistant
+    event: start
+  - trigger: state
+    entity_id: input_boolean.carga_bateria_tarifa_valle
+    to: 'on'
+  - trigger: template
+    value_template: '{{ states(''sensor.gx_device_dc_battery_charge'') | float(0)
+      >= soc_moderado }}'
+  - trigger: template
+    value_template: '{{ states(''sensor.gx_device_dc_battery_charge'') | float(100)
+      < soc_moderado - histeresis }}'
+  - trigger: time
+    at: 08:00:00
+    id: generated-l6Ze
+  - trigger: state
+    entity_id: select.octopus_energy_contador
+    to: Llano
+    id: generated-Aebi
+  - trigger: state
+    entity_id: input_boolean.carga_bateria_tarifa_valle
+    to: 'off'
+    id: generated-Lw_I
+  conditions: []
+  actions:
+  - choose:
+    - alias: Fin de ventana -> modo normal
+      conditions:
+      - condition: trigger
+        id:
+        - generated-l6Ze
+        - generated-Aebi
+        - generated-Lw_I
+      - condition: template
+        value_template: '{{ cargando }}'
+      sequence:
+      - action: logbook.log
+        data:
+          name: Carga Valle
+          message: 'Fin de carga ({% if trigger.platform == ''time'' %}08:00 {%- elif
+            trigger.entity_id.startswith(''input_boolean'') %}interruptor desactivado
+            {%- else %}cambio a Llano{% endif %}). SOC: {{ soc }}%.'
+      - action: select.select_option
+        target:
+          entity_id: select.gx_device_ess_batterylife_state
+        data:
+          option: '{{ modo_normal }}'
+      - action: number.set_value
+        target:
+          entity_id: number.gx_device_ess_max_charge_current
+        data:
+          value: '{{ corriente_max }}'
+    - alias: Evaluar carga en ventana 00:00-08:00
+      conditions:
+      - condition: template
+        value_template: '{{ trigger is not defined or trigger.get(''id'') != ''fin''
+          }}'
+      - condition: state
+        entity_id: input_boolean.carga_bateria_tarifa_valle
+        state: 'on'
+      - condition: time
+        after: 00:00:00
+        before: 08:00:00
+      sequence:
+      - variables:
+          forecast: '{{ states(sensor_forecast) | float(-1) }}'
+          obsoleto: "{% set ultimo = states('sensor.solcast_pv_forecast_api_last_polled')
+            | as_datetime(none) %} {{ forecast < 0 or ultimo is none\n   or (now()
+            - ultimo).total_seconds() > max_antiguedad_h * 3600 }}"
+          objetivo: '{% if forecast > umbral_alto_kwh %}0 {% elif obsoleto or forecast
+            < umbral_bajo_kwh %}100 {% else %}{{ soc_moderado }}{% endif %}'
+          cargar: '{% if objetivo == 100 %}true {% elif objetivo == 0 %}false {% else
+            %}{{ soc < (objetivo if cargando else objetivo - histeresis) }}{% endif
+            %}'
+          motivo: '{% if forecast > umbral_alto_kwh %}Forecast alto {%- elif obsoleto
+            %}Solcast obsoleto/no disponible (peor caso) {%- elif forecast < umbral_bajo_kwh
+            %}Forecast bajo {%- else %}Forecast moderado{% endif %}'
+      - if:
+        - condition: template
+          value_template: '{{ cargar != cargando }}'
+        then:
+        - action: logbook.log
+          data:
+            name: Carga Valle
+            message: '{{ motivo }}: {{ forecast }} kWh, SOC {{ soc }}%, objetivo {%
+              if objetivo == 0 %}sin carga{% elif objetivo == 100 %}100% hasta las
+              08:00 {%- else %}{{ objetivo }}%{% endif %}. {{ ''Inicio carga'' if
+              cargar else ''Parada carga'' }}.'
+        - if:
+          - condition: template
+            value_template: '{{ cargar }}'
+          then:
+          - action: select.select_option
+            target:
+              entity_id: select.gx_device_ess_batterylife_state
+            data:
+              option: '{{ modo_carga }}'
+          else:
+          - action: select.select_option
+            target:
+              entity_id: select.gx_device_ess_batterylife_state
+            data:
+              option: '{{ modo_normal }}'
+          - action: number.set_value
+            target:
+              entity_id: number.gx_device_ess_max_charge_current
+            data:
+              value: '{{ corriente_max }}'
+  mode: queued
+  max: 5
+  trace:
+    stored_traces: 50
+  trigger_variables:
+    modo_carga: keep_batteries_charged
+    modo_normal: optimized_no_battery_life
+    sensor_forecast: sensor.solcast_pv_forecast_forecast_remaining_today
+    umbral_alto_kwh: 30
+    umbral_bajo_kwh: 20
+    soc_moderado: 50
+    histeresis: 2
+    corriente_max: 100
+    max_antiguedad_h: 10
+  variables:
+    soc: '{{ states(''sensor.gx_device_dc_battery_charge'') | float(0) }}'
+    cargando: '{{ is_state(''select.gx_device_ess_batterylife_state'', modo_carga)
+      }}'
