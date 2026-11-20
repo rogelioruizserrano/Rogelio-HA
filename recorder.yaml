@@ -144,6 +144,7 @@ include:
     - sensor.gx_device_dc_battery_voltage
     - sensor.gx_device_dc_battery_charge
     - sensor.gx_device_grid_power_l1
+    - select.gx_device_ess_batterylife_state
 
     # ===== Inversor (Multiplus II) =====
     - sensor.multiplus_ii_48_5000_70_50_id_276_corriente_de_entrada_l1
