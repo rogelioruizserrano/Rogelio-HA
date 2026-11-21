@@ -335,3 +335,6 @@ include:
     - sensor.tesla_bateria
     - binary_sensor.tesla_salud_del_coche
     - cover.toldos
+
+    - sensor.videoportero_call_state
+    - sensor.frontal_escalera_call_state
