@@ -5250,3 +5250,27 @@
     soc: '{{ states(''sensor.gx_device_dc_battery_charge'') | float(0) }}'
     cargando: '{{ is_state(''select.gx_device_ess_batterylife_state'', modo_carga)
       }}'
+- id: '1795393227986'
+  alias: Llamada al portero
+  description: ''
+  triggers:
+  - trigger: occupancy.detected
+    target:
+      entity_id: binary_sensor.frontal_calle_llamando
+    options:
+      behavior: each
+      for: 00:00:00
+  - trigger: occupancy.detected
+    target:
+      entity_id: binary_sensor.frontal_escalera_llamando
+    options:
+      behavior: each
+      for: 00:00:00
+  conditions: []
+  actions:
+  - action: notify.mobile_app_iphone_de_rogelio_ruiz_serrano
+    metadata: {}
+    data:
+      message: Están llamando en {{ 'la calle' if trigger.entity_id == 'binary_sensor.frontal_calle_llamando'
+        else 'la escalera'}}
+  mode: single

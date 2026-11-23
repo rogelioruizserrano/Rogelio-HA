@@ -1,0 +1,25 @@
+# -----------------------------------------------------------------------------
+# Videoporteros
+# -----------------------------------------------------------------------------
+
+- platform: rest
+  name: "Frontal calle llamando"
+  unique_id: portero_calle_llamando
+  resource: http://192.168.1.170/ISAPI/VideoIntercom/callStatus
+  authentication: digest
+  username: admin
+  password: "1872lfr_LFR"
+  value_template: "{{ value_json.CallStatus.status != 'idle' }}"
+  device_class: occupancy
+  scan_interval: 3
+
+- platform: rest
+  name: "Frontal escalera llamando"
+  unique_id: portero_escalera_llamando
+  resource: http://192.168.1.179/ISAPI/VideoIntercom/callStatus
+  authentication: digest
+  username: admin
+  password: "1234567890@"
+  value_template: "{{ value_json.CallStatus.status != 'idle' }}"
+  device_class: occupancy
+  scan_interval: 3

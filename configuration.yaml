@@ -26,6 +26,7 @@ shell_command: !include shell_commands.yaml
 template: !include template.yaml
 sensor: !include sensor.yaml
 google_assistant: !include google_assistant.yaml
+binary_sensor: !include binary_sensor.yaml
 logger:
   default: error
 
