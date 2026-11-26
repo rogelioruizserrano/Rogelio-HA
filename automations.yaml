@@ -5274,3 +5274,108 @@
       message: Están llamando en {{ 'la calle' if trigger.entity_id == 'binary_sensor.frontal_calle_llamando'
         else 'la escalera'}}
   mode: single
+- id: '1795648904014'
+  alias: Reiniciar USG-3P si no hay Internet
+  description: 'Sin Internet durante 3 min (ambos pings caidos): 1) reinicio por software
+    del USG via UniFi; 2) si no se recupera en 5 min, corte de corriente con el Plug
+    S (como mucho uno cada 2 h). Reintenta cada 30 min si la caida sigue.'
+  triggers:
+  - trigger: state
+    entity_id:
+    - binary_sensor.despensa_1_1_1_1
+    - binary_sensor.despensa_8_8_8_8
+    to:
+    - 'off'
+    for: 00:03:00
+    id: caida
+  - trigger: time_pattern
+    minutes: /30
+    id: reintento
+  conditions:
+  - condition: state
+    entity_id: binary_sensor.despensa_1_1_1_1
+    state:
+    - 'off'
+    for:
+      hours: 0
+      minutes: 3
+      seconds: 0
+      milliseconds: 0
+  - condition: state
+    entity_id: binary_sensor.despensa_8_8_8_8
+    state:
+    - 'off'
+    for:
+      hours: 0
+      minutes: 3
+      seconds: 0
+      milliseconds: 0
+  - condition: state
+    entity_id: switch.despensa_enchufe_router
+    state: 'on'
+  actions:
+  - action: persistent_notification.create
+    data:
+      notification_id: reinicio_usg
+      title: Sin Internet
+      message: '{{ now().strftime(''%H:%M'') }} - Sin Internet. Reiniciando el USG
+        por software.'
+  - action: button.press
+    target:
+      entity_id: button.usg_3p_restart
+    continue_on_error: true
+  - wait_template: "{{ is_state('binary_sensor.despensa_1_1_1_1', 'on')\n   or is_state('binary_sensor.despensa_8_8_8_8',
+      'on') }}"
+    timeout: 00:05:00
+    continue_on_timeout: true
+  - if:
+    - condition: template
+      value_template: '{{ wait.completed }}'
+    then:
+    - action: persistent_notification.create
+      data:
+        notification_id: reinicio_usg
+        title: Internet recuperado
+        message: '{{ now().strftime(''%H:%M'') }} - Recuperado tras el reinicio por
+          software del USG.'
+    - stop: Recuperado con reinicio por software
+  - if:
+    - condition: template
+      value_template: "{{ (now() - states.switch.despensa_enchufe_router.last_changed)\n
+        \  .total_seconds() > 7200 }}"
+    then:
+    - action: persistent_notification.create
+      data:
+        notification_id: reinicio_usg
+        title: Sin Internet
+        message: '{{ now().strftime(''%H:%M'') }} - El reinicio por software no ha
+          bastado. Cortando corriente al USG 30 s.'
+    - action: switch.turn_off
+      target:
+        entity_id: switch.despensa_enchufe_router
+    - delay: 00:00:30
+    - action: switch.turn_on
+      target:
+        entity_id: switch.despensa_enchufe_router
+    - wait_template: "{{ is_state('binary_sensor.despensa_1_1_1_1', 'on')\n   or is_state('binary_sensor.despensa_8_8_8_8',
+        'on') }}"
+      timeout: 00:10:00
+      continue_on_timeout: true
+    - action: persistent_notification.create
+      data:
+        notification_id: reinicio_usg
+        title: '{{ ''Internet recuperado'' if wait.completed else ''Sigue sin Internet''
+          }}'
+        message: "{{ now().strftime('%H:%M') }} - {{ 'Recuperado tras cortar corriente
+          al USG.' if wait.completed\n   else 'Sin Internet tras cortar corriente.
+          Posible averia del operador u ONT; reintento cada 30 min (solo por software
+          hasta pasadas 2 h).' }}"
+    else:
+    - action: persistent_notification.create
+      data:
+        notification_id: reinicio_usg
+        title: Sigue sin Internet
+        message: '{{ now().strftime(''%H:%M'') }} - Ya se corto la corriente hace
+          menos de 2 h; solo se reintenta por software.'
+  mode: single
+  max_exceeded: silent
