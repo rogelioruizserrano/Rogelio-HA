@@ -246,6 +246,7 @@ script:
     sequence:
       - action: script.jarvis_hablar
         data:
+          solo_de_dia: true
           altavoces:
             - media_player.bano
             - media_player.google_nest_hub_cocina
