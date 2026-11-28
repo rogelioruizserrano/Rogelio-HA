@@ -5245,7 +5245,7 @@
     soc_moderado: 50
     histeresis: 2
     corriente_max: 100
-    max_antiguedad_h: 10
+    max_antiguedad_h: 15
   variables:
     soc: '{{ states(''sensor.gx_device_dc_battery_charge'') | float(0) }}'
     cargando: '{{ is_state(''select.gx_device_ess_batterylife_state'', modo_carga)
